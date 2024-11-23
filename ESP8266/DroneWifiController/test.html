@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket Test</title>
+  <script type="text/javascript">
+    var socket;
+
+    // Cuando se carga la página, crear la conexión WebSocket
+    window.onload = function() {
+      socket = new WebSocket('ws://192.168.28.117:81');  // Reemplaza con la IP de tu ESP8266
+
+      // Cuando se conecte, muestra un mensaje en la consola
+      socket.onopen = function() {
+        console.log('Conectado al servidor WebSocket');
+      };
+
+      // Cuando se reciba un mensaje del servidor, muestra el mensaje y actualiza el valor en la página
+      socket.onmessage = function(event) {
+        console.log('Mensaje recibido: ' + event.data);
+        
+        // Actualizar el valor en tiempo real
+        document.getElementById('valor').innerText = event.data;
+      };
+
+      // Si se produce un error en la conexión, muestra el error
+      socket.onerror = function(error) {
+        console.log('Error en WebSocket: ' + error);
+      };
+
+      // Cuando se cierre la conexión, muestra un mensaje
+      socket.onclose = function() {
+        console.log('Conexión cerrada');
+      };
+    };
+
+    // Función para enviar un mensaje al servidor WebSocket (si se quiere)
+    function enviarMensaje() {
+      var mensaje = document.getElementById('mensaje').value;
+      socket.send(mensaje);
+      console.log('Mensaje enviado: ' + mensaje);
+    }
+  </script>
+</head>
+<body>
+  <h1>Prueba de WebSocket</h1>
+  
+  <!-- Mostrar el valor recibido -->
+  <p>Valor recibido en tiempo real: <span id="valor">Esperando datos...</span></p>
+
+  <!-- Para enviar un mensaje al servidor (opcional) -->
+  <input type="text" id="mensaje" placeholder="Escribe un mensaje">
+  <button onclick="enviarMensaje()">Enviar Mensaje</button>
+</body>
+</html>
