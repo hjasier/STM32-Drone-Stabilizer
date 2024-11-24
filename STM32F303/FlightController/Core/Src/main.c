@@ -43,7 +43,6 @@
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
-
 /* USER CODE BEGIN PV */
 uint8_t rx_buffer[4];
 /* USER CODE END PV */
@@ -68,41 +67,45 @@ static void MX_USART1_UART_Init(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
   SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART2_UART_Init();
   MX_USART1_UART_Init();
-
   /* USER CODE BEGIN 2 */
-
+  HAL_UART_Receive_IT(&huart1, rx_buffer, sizeof(rx_buffer));
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // Recibir datos por UART (espera hasta que reciba datos)
-    HAL_UART_Receive(&huart1, rx_buffer, 3, HAL_MAX_DELAY);  // "ON" o "OFF"
 
-    // Comparar el contenido del búfer recibido
-    if (strncmp((char *)rx_buffer, "ON", 2) == 0) {
-      // Encender el LED (PB3)
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
-    } else if (strncmp((char *)rx_buffer, "OFF", 3) == 0) {
-      // Apagar el LED (PB3)
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
-    }
-
-    // Limpiar el búfer si es necesario
-    memset(rx_buffer, 0, sizeof(rx_buffer));
   }
-  /* USER CODE END WHILE */
 
-  /* USER CODE BEGIN 3 */
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
   /* USER CODE END 3 */
 }
 
@@ -250,8 +253,28 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    // Verificar si la interrupción proviene de USART1
+    if (huart->Instance == USART1) {
+        // Comparar el contenido del búfer recibido
+        if (strncmp((char *)rx_buffer, "ON", 2) == 0) {
+            // Encender el LED (PB3)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
+        } else if (strncmp((char *)rx_buffer, "OFF", 3) == 0) {
+            // Apagar el LED (PB3)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+        }
 
+        // Limpiar el búfer y esperar nuevos datos
+        memset(rx_buffer, 0, sizeof(rx_buffer));
+
+        // Volver a habilitar la recepción UART en modo interrupción
+        HAL_UART_Receive_IT(&huart1, rx_buffer, sizeof(rx_buffer));
+    }
+}
 /* USER CODE END 4 */
+
 
 /**
   * @brief  This function is executed in case of error occurrence.
