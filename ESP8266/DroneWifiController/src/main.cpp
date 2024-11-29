@@ -3,13 +3,10 @@
 #include <WebSocketsServer.h>
 #include "config.h"
 
-
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 unsigned long lastUpdate = 0;  
 int number = 0;
-
-
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
 void processMessage(String message);
@@ -32,7 +29,6 @@ void setup() {
   Serial.print("Dirección IP: ");
   Serial.println(WiFi.localIP());
   
-
   // Inicializar WebSocket
   webSocket.begin(); 
   webSocket.onEvent(webSocketEvent); 
@@ -42,6 +38,15 @@ void setup() {
 
 void loop() {
   webSocket.loop();
+
+  // Leer mensajes del puerto serie
+  if (Serial.available() > 0) { // Comprobar si hay datos disponibles en el puerto serie
+    String serialMessage = Serial.readStringUntil('\n'); // Leer hasta el final de la línea
+    serialMessage.trim(); // Eliminar espacios en blanco iniciales y finales
+    if (serialMessage.length() > 0) {
+      Serial.println("Mensaje recibido por Serial: " + serialMessage);
+    }
+  }
 
   // Enviar un número incremental o aleatorio cada 2 segundos
   unsigned long currentMillis = millis();
@@ -57,7 +62,6 @@ void loop() {
     lastUpdate = currentMillis;
   }
 }
-
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
@@ -82,11 +86,10 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
   }
 }
 
-
 void processMessage(String message) {
-  if (message == "LED_ON") {
+  if (message == "ON") {
     digitalWrite(LED_BUILTIN, LOW);
-  } else if (message == "LED_OFF") {
+  } else if (message == "OFF") {
     digitalWrite(LED_BUILTIN, HIGH);
   }
 }
