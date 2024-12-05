@@ -42,7 +42,7 @@ void loop() {
 
   // Leer mensajes del puerto serie
   if (Serial.available() > 0) { // Comprobar si hay datos disponibles en el puerto serie
-    String serialMessage = Serial.readStringUntil('\n'); // Leer hasta el final de la línea
+    String serialMessage = Serial.readStringUntil('\0'); 
     serialMessage.trim(); // Eliminar espacios en blanco iniciales y finales
     if (serialMessage.length() > 0) {
       processSerialMessage(serialMessage);
@@ -97,65 +97,41 @@ void processMessage(String message) {
 }
 
 
+int extractValue(String message, String key) {
+    int startIdx = message.indexOf(key);
+    if (startIdx != -1) {
+        int endIdx = message.indexOf(" ", startIdx);
+        if (endIdx == -1) {
+            endIdx = message.indexOf("\r\n", startIdx);
+            if (endIdx == -1) {
+                endIdx = message.length();
+            }
+        }
+        return message.substring(startIdx + key.length(), endIdx).toInt();
+    }
+    return 0;
+}
+
 void processSerialMessage(String message) {
     // Variables para almacenar los datos extraídos
     int16_t GYX = 0, GYY = 0, GYZ = 0;
     int16_t MAGX = 0, MAGY = 0, MAGZ = 0;
     int16_t ACX = 0, ACY = 0, ACZ = 0;
 
-    // Buscar y extraer cada dato usando índices
-    int startIdx, endIdx;
-
     // GY85 Data
-    startIdx = message.indexOf("GYX:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf(" ", startIdx);
-        GYX = message.substring(startIdx + 4, endIdx).toInt();
-    }
-    startIdx = message.indexOf("GYY:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf(" ", startIdx);
-        GYY = message.substring(startIdx + 4, endIdx).toInt();
-    }
-    startIdx = message.indexOf("GYZ:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf("\r\n", startIdx);
-        GYZ = message.substring(startIdx + 4, endIdx).toInt();
-    }
+    GYX = extractValue(message, "GYX:");
+    GYY = extractValue(message, "GYY:");
+    GYZ = extractValue(message, "GYZ:");
 
     // HMC5883L Data
-    startIdx = message.indexOf("MAGX:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf(" ", startIdx);
-        MAGX = message.substring(startIdx + 5, endIdx).toInt();
-    }
-    startIdx = message.indexOf("MAGY:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf(" ", startIdx);
-        MAGY = message.substring(startIdx + 5, endIdx).toInt();
-    }
-    startIdx = message.indexOf("MAGZ:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf("\r\n", startIdx);
-        MAGZ = message.substring(startIdx + 5, endIdx).toInt();
-    }
+    MAGX = extractValue(message, "MAGX:");
+    MAGY = extractValue(message, "MAGY:");
+    MAGZ = extractValue(message, "MAGZ:");
 
     // ADXL345 Data
-    startIdx = message.indexOf("ACX:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf(" ", startIdx);
-        ACX = message.substring(startIdx + 4, endIdx).toInt();
-    }
-    startIdx = message.indexOf("ACY:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf(" ", startIdx);
-        ACY = message.substring(startIdx + 4, endIdx).toInt();
-    }
-    startIdx = message.indexOf("ACZ:");
-    if (startIdx != -1) {
-        endIdx = message.indexOf("\r\n", startIdx);
-        ACZ = message.substring(startIdx + 4, endIdx).toInt();
-    }
+    ACX = extractValue(message, "ACX:");
+    ACY = extractValue(message, "ACY:");
+    ACZ = extractValue(message, "ACZ:");
 
     // Imprimir los datos procesados
     Serial.println("Datos Procesados:");
