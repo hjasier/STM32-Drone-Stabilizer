@@ -1,0 +1,4 @@
+../Core/Src/Comunication.c:6:6:UART_Init	1
+../Core/Src/Comunication.c:11:6:sendSensorData	1
+../Core/Src/Comunication.c:30:6:sendControlCommand	1
+../Core/Src/Comunication.c:37:6:receiveControlCommand	5

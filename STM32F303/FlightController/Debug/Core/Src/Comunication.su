@@ -1,0 +1,4 @@
+../Core/Src/Comunication.c:6:6:UART_Init	8	static
+../Core/Src/Comunication.c:11:6:sendSensorData	216	static
+../Core/Src/Comunication.c:30:6:sendControlCommand	80	static
+../Core/Src/Comunication.c:37:6:receiveControlCommand	80	static
