@@ -1,0 +1,7 @@
+../Core/Src/Control.c:16:6:Control_Init	4	static
+../Core/Src/Control.c:37:6:Control_Update	8	static
+../Core/Src/Control.c:46:6:Control_Compute	56	static
+../Core/Src/Control.c:62:7:pidCompute	24	static
+../Core/Src/Control.c:78:6:Control_SetMotorSpeeds	24	static
+../Core/Src/Control.c:92:6:Control_SetMotorsPower	24	static
+../Core/Src/Control.c:108:6:Control_SendMotorCommands	8	static

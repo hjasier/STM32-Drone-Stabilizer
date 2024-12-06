@@ -5,7 +5,13 @@
 #define HMC5883L_ADDR 0x1E
 #define ITG3205_ADDR  0x68
 
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+int16_t mx, my, mz;
+
+
 extern I2C_HandleTypeDef hi2c1;
+
 
 void GY85_Init() {
     // Inicializar el acelerómetro (ADXL345)
@@ -43,6 +49,13 @@ void ITG3205_ReadData(int16_t *x, int16_t *y, int16_t *z) {
     *x = (int16_t)((buffer[0] << 8) | buffer[1]);
     *y = (int16_t)((buffer[2] << 8) | buffer[3]);
     *z = (int16_t)((buffer[4] << 8) | buffer[5]);
+}
+
+
+void Sensor_Read(void) {
+    ADXL345_ReadData(&ax, &ay, &az);  // Acelerómetro
+    ITG3205_ReadData(&gx, &gy, &gz);  // Giroscopio
+    HMC5883L_ReadData(&mx, &my, &mz);  // Magnetómetro
 }
 
 void printMagnetometro() {

@@ -1,4 +1,5 @@
 "./Core/Src/Comunication.o"
+"./Core/Src/Control.o"
 "./Core/Src/Sensor.o"
 "./Core/Src/main.o"
 "./Core/Src/stm32f3xx_hal_msp.o"

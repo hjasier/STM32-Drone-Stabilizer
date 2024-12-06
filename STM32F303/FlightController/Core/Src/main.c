@@ -24,6 +24,7 @@
 #include <string.h>
 #include "Sensor.h"
 #include "Comunication.h"
+#include "Control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -114,6 +115,7 @@ int main(void)
   // Inicializar el sensor GY-85
   GY85_Init();//Acelerometro
 
+  Control_Init();
 
   HAL_UART_Receive_IT(&huart1, rx_buffer, sizeof(rx_buffer));
 
@@ -122,7 +124,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
-
+  Control_SetMotorsPower(10);
 #if Calibrate
   TIM1->CCR4 = 0;
   HAL_Delay (3000);
@@ -144,12 +146,8 @@ int main(void)
   while (1)
   {
 
-      sendSensorData();
-
-      // Recibir comandos desde el ESP8266
-      receiveControlCommand();
-
-      HAL_Delay(1000);
+	  Control_Update();
+	  HAL_Delay(100);
   }
 
     /* USER CODE END WHILE */

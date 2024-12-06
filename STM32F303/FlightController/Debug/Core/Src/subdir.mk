@@ -6,6 +6,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Core/Src/Comunication.c \
+../Core/Src/Control.c \
 ../Core/Src/Sensor.c \
 ../Core/Src/main.c \
 ../Core/Src/stm32f3xx_hal_msp.c \
@@ -17,6 +18,7 @@ C_SRCS += \
 
 OBJS += \
 ./Core/Src/Comunication.o \
+./Core/Src/Control.o \
 ./Core/Src/Sensor.o \
 ./Core/Src/main.o \
 ./Core/Src/stm32f3xx_hal_msp.o \
@@ -28,6 +30,7 @@ OBJS += \
 
 C_DEPS += \
 ./Core/Src/Comunication.d \
+./Core/Src/Control.d \
 ./Core/Src/Sensor.d \
 ./Core/Src/main.d \
 ./Core/Src/stm32f3xx_hal_msp.d \
@@ -45,7 +48,7 @@ Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/Comunication.cyclo ./Core/Src/Comunication.d ./Core/Src/Comunication.o ./Core/Src/Comunication.su ./Core/Src/Sensor.cyclo ./Core/Src/Sensor.d ./Core/Src/Sensor.o ./Core/Src/Sensor.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32f3xx_hal_msp.cyclo ./Core/Src/stm32f3xx_hal_msp.d ./Core/Src/stm32f3xx_hal_msp.o ./Core/Src/stm32f3xx_hal_msp.su ./Core/Src/stm32f3xx_it.cyclo ./Core/Src/stm32f3xx_it.d ./Core/Src/stm32f3xx_it.o ./Core/Src/stm32f3xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f3xx.cyclo ./Core/Src/system_stm32f3xx.d ./Core/Src/system_stm32f3xx.o ./Core/Src/system_stm32f3xx.su ./Core/Src/uart_handler.cyclo ./Core/Src/uart_handler.d ./Core/Src/uart_handler.o ./Core/Src/uart_handler.su
+	-$(RM) ./Core/Src/Comunication.cyclo ./Core/Src/Comunication.d ./Core/Src/Comunication.o ./Core/Src/Comunication.su ./Core/Src/Control.cyclo ./Core/Src/Control.d ./Core/Src/Control.o ./Core/Src/Control.su ./Core/Src/Sensor.cyclo ./Core/Src/Sensor.d ./Core/Src/Sensor.o ./Core/Src/Sensor.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32f3xx_hal_msp.cyclo ./Core/Src/stm32f3xx_hal_msp.d ./Core/Src/stm32f3xx_hal_msp.o ./Core/Src/stm32f3xx_hal_msp.su ./Core/Src/stm32f3xx_it.cyclo ./Core/Src/stm32f3xx_it.d ./Core/Src/stm32f3xx_it.o ./Core/Src/stm32f3xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f3xx.cyclo ./Core/Src/system_stm32f3xx.d ./Core/Src/system_stm32f3xx.o ./Core/Src/system_stm32f3xx.su ./Core/Src/uart_handler.cyclo ./Core/Src/uart_handler.d ./Core/Src/uart_handler.o ./Core/Src/uart_handler.su
 
 .PHONY: clean-Core-2f-Src
 
