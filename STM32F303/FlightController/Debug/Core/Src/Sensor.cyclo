@@ -1,0 +1,9 @@
+../Core/Src/Sensor.c:16:6:GY85_Init	1
+../Core/Src/Sensor.c:30:6:ADXL345_ReadData	1
+../Core/Src/Sensor.c:38:6:HMC5883L_ReadData	1
+../Core/Src/Sensor.c:46:6:ITG3205_ReadData	1
+../Core/Src/Sensor.c:55:6:Sensor_Read	1
+../Core/Src/Sensor.c:61:6:printMagnetometro	1
+../Core/Src/Sensor.c:70:6:printGiroscopio	1
+../Core/Src/Sensor.c:78:6:printAcelerometro	1
+../Core/Src/Sensor.c:88:6:sendGY85Data	1
