@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RotateCw } from 'lucide-react';
 import DroneImage from '../assets/drone.png';
 import Prop from '../assets/prop.png';
+import ThreeDModel from '../components/ThreeDModel';
 
 const PropellerIcon = () => (
   <svg viewBox="0 0 100 100" className="w-16 h-16">
@@ -21,6 +22,38 @@ const PowerBar = ({ value }) => (
   </div>
 );
 
+const SteppedPowerBar = ({ value, onIncrease, onDecrease }) => (
+  <div className="flex items-center space-x-2">
+    <button 
+      onClick={onDecrease} 
+      className="bg-neutral-700 text-white px-2 py-1 rounded hover:bg-neutral-600"
+    >
+      ▼
+    </button>
+    <div className="h-32 w-8 bg-neutral-800 relative rounded-sm overflow-hidden">
+      {[...Array(20)].map((_, index) => (
+        <div 
+          key={index} 
+          className="absolute w-full border-b border-black"
+          style={{ 
+            bottom: `${index * 5}%`, 
+            opacity: index * 5 <= value ? 1 : 0.3 
+          }}
+        />
+      ))}
+      <div 
+        className="absolute bottom-0 left-0 right-0 bg-green-500 transition-all duration-300"
+        style={{ height: `${value}%` }}
+      />
+    </div>
+    <button 
+      onClick={onIncrease} 
+      className="bg-neutral-700 text-white px-2 py-1 rounded hover:bg-neutral-600"
+    >
+      ▲
+    </button>
+  </div>
+);
 
 const Dashboard = () => {
   // State for all dynamic values
@@ -34,6 +67,7 @@ const Dashboard = () => {
   const [masterControl, setMasterControl] = useState(55);
   const [horizontalSpeed, setHorizontalSpeed] = useState(54);
   const [verticalSpeed, setVerticalSpeed] = useState(54);
+  const [customControl, setCustomControl] = useState(55);
   const [axisValues, setAxisValues] = useState(
     Array(9).fill().map(() => ({ x: 0, y: 0 }))
   );
@@ -85,6 +119,15 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Custom Control Handlers
+  const handleCustomIncrease = () => {
+    setCustomControl(prev => Math.min(100, prev + 5));
+  };
+
+  const handleCustomDecrease = () => {
+    setCustomControl(prev => Math.max(0, prev - 5));
+  };
+
   // Axis labels
   const axisControls = [
     ['X', 'Y', 'Z'],
@@ -99,43 +142,47 @@ const Dashboard = () => {
       <div className="grid grid-cols-3 gap-8">
         {/* Left Column - Propellers and Speed */}
         <div className="space-y-6">
-
-
           {/* Propellers Section */}
           <div className="bg-neutral-900 p-6 rounded-lg justify-center flex">
             <div className='items-center flex flex-row '>
-            <div className="grid grid-cols-2 gap-x-12 gap-y-8">
-              {propellers.map((prop, index) => (
-                <div key={index} className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs mb-1">{prop.id}</span>
-                    <div className="bg-black rounded-full p-1">
-                      <PropellerIcon />
+              <div className="grid grid-cols-2 gap-x-12 gap-y-8">
+                {propellers.map((prop, index) => (
+                  <div key={index} className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs mb-1">{prop.id}</span>
+                      <div className="bg-black rounded-full p-1">
+                        <PropellerIcon />
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <PowerBar value={prop.speed} />
+                      <span className="text-xs mt-1">{prop.speed.toFixed(0)}%</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <PowerBar value={prop.speed} />
-                    <span className="text-xs mt-1">{prop.speed.toFixed(0)}%</span>
-                  </div>
+                ))}
+              </div>
+              
+              {/* Master Control */}
+              <div className="flex justify-end mt-4 mr-4 ml-10 space-x-4">
+                <div className="flex flex-col items-center">
+                  <PowerBar value={masterControl} />
+                  <span className="text-xs mt-1">MASTER</span>
+                  <span className="text-xs">{masterControl.toFixed(0)}%</span>
                 </div>
-              ))}
-            </div>
-            
-            {/* Master Control */}
-            <div className="flex justify-end mt-4 mr-4 ml-10">
-              <div className="flex flex-col items-center">
-                <PowerBar value={masterControl} />
-                <span className="text-xs mt-1">MASTER</span>
-                <span className="text-xs">{masterControl.toFixed(0)}%</span>
+
+                {/* New Custom Control */}
+                <div className="flex flex-col items-center">
+                  <SteppedPowerBar 
+                    value={customControl} 
+                    onIncrease={handleCustomIncrease}
+                    onDecrease={handleCustomDecrease}
+                  />
+                  <span className="text-xs mt-1">CONTROL</span>
+                  <span className="text-xs">{customControl.toFixed(0)}%</span>
+                </div>
               </div>
             </div>
-
-            </div>
           </div>
-
-
-
-          
 
           {/* Speed Gauges */}
           <div className="bg-neutral-900 p-4 rounded-lg">
@@ -164,11 +211,9 @@ const Dashboard = () => {
         <div className="flex flex-col items-center justify-center space-y-8">
           {/* Drone Image */}
           <div className="">
-            <img
-              src={DroneImage}
-              alt="Drone"
-              className="w-[400px] h-[400px] object-contain"
-            />
+            <div style={{ width: '500px', height: '400px' }}>
+              <ThreeDModel />
+            </div>
           </div>
 
           {/* Direction Controls */}

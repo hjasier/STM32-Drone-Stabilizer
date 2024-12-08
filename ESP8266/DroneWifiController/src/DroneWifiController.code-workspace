@@ -3,6 +3,10 @@
 		{
 			"name": "DroneWifiController",
 			"path": ".."
+		},
+		{
+			"name": "Arduino test",
+			"path": "C:/Users/Barak/Documents/PlatformIO/Projects/Arduino test"
 		}
 	],
 	"settings": {}
