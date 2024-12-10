@@ -56,6 +56,9 @@ const SteppedPowerBar = ({ value, onIncrease, onDecrease }) => (
 );
 
 const Dashboard = () => {
+  const [socket, setSocket] = useState(null); // Estado para el WebSocket
+  const [valorRecibido, setValorRecibido] = useState('Esperando datos...'); // Estado para mensajes recibidos
+ 
   // State for all dynamic values
   const [propellers, setPropellers] = useState([
     { id: 'PROP 1', speed: 65 },
@@ -67,7 +70,7 @@ const Dashboard = () => {
   const [masterControl, setMasterControl] = useState(55);
   const [horizontalSpeed, setHorizontalSpeed] = useState(54);
   const [verticalSpeed, setVerticalSpeed] = useState(54);
-  const [customControl, setCustomControl] = useState(55);
+  const [customControl, setCustomControl] = useState(0);
   const [axisValues, setAxisValues] = useState(
     Array(9).fill().map(() => ({ x: 0, y: 0 }))
   );
@@ -122,10 +125,12 @@ const Dashboard = () => {
   // Custom Control Handlers
   const handleCustomIncrease = () => {
     setCustomControl(prev => Math.min(100, prev + 5));
+    sendCommand(`PWR${customControl}`); // Enviar comando al ESP8266
   };
 
   const handleCustomDecrease = () => {
     setCustomControl(prev => Math.max(0, prev - 5));
+    sendCommand(`PWR${customControl}`); // Enviar comando al ESP8266
   };
 
   // Axis labels
@@ -134,6 +139,46 @@ const Dashboard = () => {
     ['U', 'V', 'W'],
     ['A', 'B', 'C']
   ];
+
+
+
+    // Inicializar WebSocket
+    useEffect(() => {
+      const ws = new WebSocket('ws://192.168.235.45:81'); // Cambia la IP por la de tu ESP8266
+      setSocket(ws);
+  
+      ws.onopen = () => {
+        console.log('Conexión WebSocket abierta');
+      };
+  
+      ws.onmessage = (event) => {
+        console.log('Mensaje recibido:', event.data);
+        setValorRecibido(event.data); // Actualiza el estado con el mensaje recibido
+      };
+  
+      ws.onerror = (error) => {
+        console.error('Error en WebSocket:', error);
+      };
+  
+      ws.onclose = () => {
+        console.log('Conexión WebSocket cerrada');
+      };
+  
+      // Limpieza al desmontar el componente
+      return () => {
+        ws.close();
+      };
+    }, []);
+  
+    // Función para enviar mensajes
+    const sendCommand = (command) => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(command);
+        console.log('Mensaje enviado:', command);
+      } else {
+        console.warn('WebSocket no está conectado');
+      }
+    };
 
   return (
     <div className="bg-black min-h-screen p-8 text-white">
@@ -202,9 +247,38 @@ const Dashboard = () => {
                     <div className="text-xl font-bold">{verticalSpeed.toFixed(1)}k/h</div>
                   </div>
                 </div>
-              </div>
+              </div> 
             </div>
           </div>
+
+
+          {/* WebSocket Messages */}
+          <div className="bg-neutral-900 p-6 rounded-lg">
+            <h2 className="text-xl font-bold mb-4">COMMAND SEND</h2>
+            <div className="mb-4">
+              <span>Valor recibido en tiempo real: </span>
+              <span className="font-bold">{valorRecibido}</span>
+            </div>
+            <div className='flex flex-row space-x-3'>
+            <input
+              type="text"
+              className="w-full p-2 bg-neutral-800 rounded mb-2"
+              placeholder="Send a command to the drone"
+              onKeyDown={(e) => {
+               if (e.key === 'Enter') sendCommand(e.target.value);
+              }}
+            />
+            <button
+              onClick={() => sendCommand('Hola desde React')}
+              className="bg-green-600 px-4  rounded hover:bg-green-500"
+            >
+              Send Command
+            </button>
+            </div>
+          </div>
+
+
+
         </div>
 
         {/* Middle Column - Drone View and Controls */}
