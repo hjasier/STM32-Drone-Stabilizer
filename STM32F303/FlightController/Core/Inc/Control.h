@@ -35,7 +35,9 @@ void Control_Update(void);
 void Control_Compute(int ax, int ay, int az, int gx, int gy, int gz, int mx, int my, int mz);
 void Control_SetMotorSpeeds(void);
 void Control_SendMotorCommands(void);
-void Control_SetMotorsPower(int base_power_percentage);
+void Control_SetMotorsPower(uint8_t base_power_percentage);
+void Control_ArmMotors();
+void Control_Stop(void);
 float pidCompute(PID* pid, float error);
 
 #endif // CONTROL_H

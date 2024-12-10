@@ -34,24 +34,33 @@ void sendControlCommand(const char* command) {
 }
 
 // Función para recibir comandos del ESP8266
-void receiveControlCommand(void) {
-    uint8_t rx_buffer[64];  // Buffer para almacenar el comando recibido
-    HAL_StatusTypeDef status = HAL_UART_Receive(&huart1, rx_buffer, sizeof(rx_buffer) - 1, 1000);  // Timeout 1 segundo
+void receiveControlCommand(uint8_t *rx_buffer, uint16_t length) {
 
-    if (status == HAL_OK) {
-        rx_buffer[sizeof(rx_buffer) - 1] = '\0';  // Asegurarse de que la cadena esté terminada en nulo
+	if (strncmp((char *)rx_buffer, "Dat", 3) == 0 || strncmp((char *)rx_buffer, "Men", 3) == 0) {
+	    memset(rx_buffer, 0, length);  // Limpiar el buffer
+	    return;
+	}
 
-        // Aquí procesas el comando recibido. Ejemplo:
-        if (strncmp((char*)rx_buffer, "stop", 4) == 0) {
-            // Detener los motores
-            sendControlCommand("Motor stopped");
-        } else if (strncmp((char*)rx_buffer, "start", 5) == 0) {
-            // Iniciar motores a velocidad 100
-            sendControlCommand("Motor started at speed 100");
-        } else if (strncmp((char*)rx_buffer, "set_speed", 9) == 0) {
-            // Extraer la velocidad del comando
-            int speed = atoi((char*)rx_buffer + 10);  // Asumimos que el valor de velocidad viene después de "set_speed "
-            sendControlCommand("Speed set");
-        }
+    printData("Comando recibido\n");
+
+    if (strncmp((char *)rx_buffer, "LED_ON", 6) == 0) {
+        // Encender el LED (PB3)
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
+    } else if (strncmp((char *)rx_buffer, "LED_OFF", 7) == 0) {
+        // Apagar el LED (PB3)
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
     }
+
+    else if (strncmp((char*) rx_buffer, "ARM", 3) == 0) {
+		Control_ArmMotors();
+	} else if (strncmp((char*) rx_buffer, "STOP", 4) == 0) {
+		Control_Stop();
+	} else if (strncmp((char*) rx_buffer, "PWR", 3) == 0) {
+		uint8_t speed = atoi((char*) &rx_buffer[3]);
+		Control_SetMotorsPower(speed);
+	}
+
+
+    // Limpiar el buffer después de procesar
+    memset(rx_buffer, 0, length);
 }

@@ -3,8 +3,8 @@
 #include <math.h>
 #include <stdio.h>
 
-#define MOTOR_MAX_SPEED 1000
-#define MOTOR_MIN_SPEED 0
+#define MOTOR_MAX_SPEED 200
+#define MOTOR_MIN_SPEED 100
 
 Control_t Control;
 
@@ -33,6 +33,23 @@ void Control_Init(void) {
     Control.pid_yaw.integral = 0.0;
 }
 
+
+void Control_ArmMotors(){
+	Control.motor_control.motor1_speed = MOTOR_MAX_SPEED;
+	Control.motor_control.motor2_speed = MOTOR_MAX_SPEED;
+	Control.motor_control.motor3_speed = MOTOR_MAX_SPEED;
+	Control.motor_control.motor4_speed = MOTOR_MAX_SPEED;
+	Control_Update();
+	HAL_Delay(3000);
+	Control.motor_control.motor1_speed = 100;
+	Control.motor_control.motor2_speed = 100;
+	Control.motor_control.motor3_speed = 100;
+	Control.motor_control.motor4_speed = 100;
+	Control_Update();
+	HAL_Delay(3000);
+
+	printData("Motors armed\n");
+}
 
 void Control_Update(void) {
     //Control_Compute(ax, ay, az, gx, gy, gz, mx, my, mz);
@@ -76,7 +93,6 @@ float pidCompute(PID* pid, float error) {
 
 // Asignar las velocidades de los motores basados en el PID
 void Control_SetMotorSpeeds(void) {
-
     int motor1_speed = (Control.motor_control.motor1_speed < 0) ? 0 : (Control.motor_control.motor1_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor1_speed);
     int motor2_speed = (Control.motor_control.motor2_speed < 0) ? 0 : (Control.motor_control.motor2_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor2_speed);
     int motor3_speed = (Control.motor_control.motor3_speed < 0) ? 0 : (Control.motor_control.motor3_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor3_speed);
@@ -89,13 +105,16 @@ void Control_SetMotorSpeeds(void) {
 }
 
 
-void Control_SetMotorsPower(int base_power_percentage) {
+void Control_SetMotorsPower(uint8_t base_power_percentage) {
     if (base_power_percentage < 0) base_power_percentage = 0;
     if (base_power_percentage > 100) base_power_percentage = 100;
 
-    int base_power = MOTOR_MAX_SPEED * base_power_percentage / 100;
+    printf("Base power percentage: %d\n", base_power_percentage);
 
-    printData("Base power: %d\n", base_power);
+    int base_power = MOTOR_MIN_SPEED + ((MOTOR_MAX_SPEED - MOTOR_MIN_SPEED) * base_power_percentage) / 100;
+
+
+    printf("Base power: %d\n", base_power);
     Control.motor_control.motor1_speed = base_power;
     Control.motor_control.motor2_speed = base_power;
     Control.motor_control.motor3_speed = base_power;
@@ -106,8 +125,19 @@ void Control_SetMotorsPower(int base_power_percentage) {
 
 
 void Control_SendMotorCommands(void) {
-    printData("Motor 1 speed: %d\n", Control.motor_control.motor1_speed);
-    printData("Motor 2 speed: %d\n", Control.motor_control.motor2_speed);
-    printData("Motor 3 speed: %d\n", Control.motor_control.motor3_speed);
-    printData("Motor 4 speed: %d\n", Control.motor_control.motor4_speed);
+    printf("Motor 1 speed: %d\n", Control.motor_control.motor1_speed);
+    printf("Motor 2 speed: %d\n", Control.motor_control.motor2_speed);
+    printf("Motor 3 speed: %d\n", Control.motor_control.motor3_speed);
+    printf("Motor 4 speed: %d\n", Control.motor_control.motor4_speed);
+}
+
+
+void Control_Stop(void) {
+	Control.motor_control.motor1_speed = 0;
+	Control.motor_control.motor2_speed = 0;
+	Control.motor_control.motor3_speed = 0;
+	Control.motor_control.motor4_speed = 0;
+
+	Control_Update();
+	printData("Motors stopped\n");
 }

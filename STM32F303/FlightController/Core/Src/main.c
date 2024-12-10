@@ -29,7 +29,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define Calibrate 0
+#define Calibrate 1
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -55,7 +55,11 @@ UART_HandleTypeDef huart2;
 #define ADXL345_ADDR  0x53
 #define HMC5883L_ADDR 0x1E
 #define ITG3205_ADDR  0x68
-uint8_t rx_buffer[4];
+#define RX_BUFFER_SIZE 128  // Tamaño del buffer circular
+uint8_t rx_buffer[RX_BUFFER_SIZE];
+uint8_t temp_byte;          // Almacén temporal para el byte recibido
+volatile uint16_t write_index = 0;  // Índice de escritura en el buffer
+volatile uint16_t read_index = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -113,7 +117,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   // Inicializar el sensor GY-85
-  GY85_Init();//Acelerometro
+  //GY85_Init();
 
   Control_Init();
 
@@ -124,20 +128,18 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
-  Control_SetMotorsPower(10);
 #if Calibrate
-  TIM1->CCR4 = 0;
-  HAL_Delay (3000);
-  TIM1->CCR4 = 100;
-  HAL_Delay (1000);
-  for (uint8_t i=0; i< 120; i++)
-  {
-	  TIM1->CCR4 =100+i;
-	  HAL_Delay (100);
-  }
-    TIM1->CCR4 = 100;
+  Control_ArmMotors();
+//  Control_SetMotorsPower(10);
+//  HAL_Delay(3000);
+//  Control_SetMotorsPower(100);
+//  HAL_Delay(3000);
+//  Control_SetMotorsPower(0);
+
 #endif
 
+   //Control_ArmMotors();
+   //Control_SetMotorsPower(10);
 
   /* USER CODE END 2 */
 
@@ -146,8 +148,8 @@ int main(void)
   while (1)
   {
 
-	  Control_Update();
-	  HAL_Delay(100);
+	  //Control_Update();
+	  //HAL_Delay(100);
   }
 
     /* USER CODE END WHILE */
@@ -510,31 +512,40 @@ void sendData(char* data) {
   HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
 }
 
+int _write(int file, char *data, int len) {
+    HAL_UART_Transmit(&huart2, (uint8_t*)data, len, HAL_MAX_DELAY);
+    return len;
+}
 
 
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//
-//    // Verificar si la interrupción proviene de USART1
-//    if (huart->Instance == USART1) {
-//    	printData((char *)rx_buffer);
-//
-//        // Comparar el contenido del búfer recibido
-//        if (strncmp((char *)rx_buffer, "ON", 2) == 0) {
-//            // Encender el LED (PB3)
-//            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
-//        } else if (strncmp((char *)rx_buffer, "OFF", 3) == 0) {
-//            // Apagar el LED (PB3)
-//            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
-//        }
-//
-//        // Limpiar el búfer y esperar nuevos datos
-//        memset(rx_buffer, 0, sizeof(rx_buffer));
-//
-//        // Volver a habilitar la recepción UART en modo interrupción
-//        HAL_UART_Receive_IT(&huart1, rx_buffer, sizeof(rx_buffer));
-//    }
-//}
+
+// Función que se llama cuando un byte es recibido
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART1) {
+        // Almacenar el byte recibido en el buffer circular
+        rx_buffer[write_index++] = temp_byte;
+
+        // Asegurar que el índice no se desborde
+        if (write_index >= RX_BUFFER_SIZE) {
+            write_index = 0;
+        }
+
+        // Si el byte recibido es un delimitador (por ejemplo, '\n'), procesamos el mensaje
+        if (temp_byte == '\n') {
+            // Procesar el buffer hasta la posición de lectura
+            uint16_t length = (write_index > read_index) ? (write_index - read_index) : (RX_BUFFER_SIZE - read_index + write_index);
+            receiveControlCommand(&rx_buffer[read_index], length);
+
+            // Avanzar el índice de lectura
+            read_index = write_index;
+        }
+
+        // Continuar recibiendo el siguiente byte
+        HAL_UART_Receive_IT(&huart1, &temp_byte, 1);
+    }
+}
+
+
 /* USER CODE END 4 */
 
 /**
