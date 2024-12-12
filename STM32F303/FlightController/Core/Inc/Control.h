@@ -32,7 +32,7 @@ extern Control_t Control;
 
 void Control_Init(void);
 void Control_Update(void);
-void Control_Compute(int ax, int ay, int az, int gx, int gy, int gz, int mx, int my, int mz);
+void Control_Compute(struct girodata_t* giro);
 void Control_SetMotorSpeeds(void);
 void Control_SendMotorCommands(void);
 void Control_SetMotorsPower(uint8_t base_power_percentage);

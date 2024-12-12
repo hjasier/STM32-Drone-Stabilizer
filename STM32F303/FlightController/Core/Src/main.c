@@ -47,6 +47,7 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -58,7 +59,7 @@ UART_HandleTypeDef huart2;
 #define RX_BUFFER_SIZE 128  // Tamaño del buffer circular
 uint8_t rx_buffer[RX_BUFFER_SIZE];
 uint8_t temp_byte;          // Almacén temporal para el byte recibido
-volatile uint16_t write_index = 0;  // Índice de escritura en el buffer
+volatile uint16_t write_index = 0;  // �?ndice de escritura en el buffer
 volatile uint16_t read_index = 0;
 /* USER CODE END PV */
 
@@ -70,6 +71,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 #define OPT_MEM 1
@@ -115,9 +117,10 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   // Inicializar el sensor GY-85
-  //GY85_Init();
+  GY85_Init();
 
   Control_Init();
 
@@ -137,6 +140,8 @@ int main(void)
 //  Control_SetMotorsPower(0);
 
 #endif
+  HAL_TIM_Base_Start_IT(&htim3);
+
 
    //Control_ArmMotors();
    //Control_SetMotorsPower(10);
@@ -147,9 +152,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  //printMagnetometro();
+//	  printGiroscopio();
+//	  HAL_Delay(100);
+	  //printMagnetometro();
+	  //Sensor_Read();
 	  //Control_Update();
-	  //HAL_Delay(100);
+
   }
 
     /* USER CODE END WHILE */
@@ -400,6 +409,51 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 8-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1000-1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -518,9 +572,9 @@ int _write(int file, char *data, int len) {
 }
 
 
-
 // Función que se llama cuando un byte es recibido
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	//Control_Update();// por probar
     if (huart->Instance == USART1) {
         // Almacenar el byte recibido en el buffer circular
         rx_buffer[write_index++] = temp_byte;

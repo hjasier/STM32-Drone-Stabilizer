@@ -14,18 +14,26 @@ extern I2C_HandleTypeDef hi2c1;
 
 
 void GY85_Init() {
+    uint8_t data;
+
     // Inicializar el acelerómetro (ADXL345)
-    uint8_t data = 0x08; // Encender el sensor
+    data = 0x08; // Encender el sensor
     HAL_I2C_Mem_Write(&hi2c1, (ADXL345_ADDR << 1), 0x2D, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
 
     // Inicializar el magnetómetro (HMC5883L)
-    data = 0x70; // Configuración estándar
+    // Configurar el Configuration Register A (0x00)
+    data = 0x70; // 8 muestras promedio, salida a 15 Hz
     HAL_I2C_Mem_Write(&hi2c1, (HMC5883L_ADDR << 1), 0x00, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
+
+    // Configurar el Mode Register (0x02) para modo continuo
+    data = 0x00; // Modo continuo
+    HAL_I2C_Mem_Write(&hi2c1, (HMC5883L_ADDR << 1), 0x02, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
 
     // Inicializar el giroscopio (ITG-3205)
     data = 0x00; // Configuración estándar
     HAL_I2C_Mem_Write(&hi2c1, (ITG3205_ADDR << 1), 0x3E, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
 }
+
 
 void ADXL345_ReadData(int16_t *x, int16_t *y, int16_t *z) {
     uint8_t buffer[6];
@@ -52,10 +60,10 @@ void ITG3205_ReadData(int16_t *x, int16_t *y, int16_t *z) {
 }
 
 
-void Sensor_Read(void) {
-    ADXL345_ReadData(&ax, &ay, &az);  // Acelerómetro
-    ITG3205_ReadData(&gx, &gy, &gz);  // Giroscopio
-    HMC5883L_ReadData(&mx, &my, &mz);  // Magnetómetro
+void Sensor_Read(struct girodata_t* giro) {
+    ADXL345_ReadData(&giro->ax, &giro->ay, &giro->az);  // Acelerómetro
+    ITG3205_ReadData(&giro->gx, &giro->gy, &giro->gz);  // Giroscopio
+    HMC5883L_ReadData(&giro->mx, &giro->my, &giro->mz);  // Magnetómetro
 }
 
 void printMagnetometro() {
@@ -63,8 +71,7 @@ void printMagnetometro() {
     char data_msg[64];
     HMC5883L_ReadData(&x, &y, &z);
     snprintf(data_msg, sizeof(data_msg), "MAGX:%d MAGY:%d MAGZ:%d\r\n", x, y, z);
-    // Supongamos que tienes una función `printData()` que envía datos a través de UART
-    printData(data_msg);
+    printf(data_msg);
 }
 
 void printGiroscopio() {
@@ -72,7 +79,7 @@ void printGiroscopio() {
     char data_msg[64];
     ITG3205_ReadData(&x, &y, &z);
     snprintf(data_msg, sizeof(data_msg), "GYX:%d GYY:%d GYZ:%d\r\n", x, y, z);
-    printData(data_msg);
+    printf(data_msg);
 }
 
 void printAcelerometro() {
@@ -80,7 +87,18 @@ void printAcelerometro() {
     char data_msg[64];
     ADXL345_ReadData(&x, &y, &z);
     snprintf(data_msg, sizeof(data_msg), "ACCX:%d ACCY:%d ACCZ:%d\r\n", x, y, z);
-    printData(data_msg);
+    printf(data_msg);
+}
+
+
+void I2C_Scan() {
+    char msg[64];
+    for (uint8_t i = 0; i < 128; i++) {
+        if (HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, HAL_MAX_DELAY) == HAL_OK) {
+            snprintf(msg, sizeof(msg), "Dispositivo encontrado en: 0x%02X\r\n", i);
+            printf(msg);
+        }
+    }
 }
 
 
@@ -97,6 +115,6 @@ void sendGY85Data() {
 	    snprintf(data_msg, sizeof(data_msg), "GYX:%d GYY:%d GYZ:%d MAGX:%d MAGY:%d MAGZ:%d ACX:%d ACY:%d ACZ:%d", x, y, z, u, v, w, a, b, c);
 	    data_msg[strlen(data_msg)] = '\0';
 
-	    printData(data_msg);
+	    printf(data_msg);
 	    sendData(data_msg);
 }
