@@ -4,6 +4,7 @@
 #include "main.h"
 #include "Sensor.h"
 
+
 // Estructura PID
 typedef struct {
     float Kp;

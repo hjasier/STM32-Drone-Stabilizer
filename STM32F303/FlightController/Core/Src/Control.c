@@ -75,9 +75,9 @@ void Control_Update(void) {
 }
 
 void Control_Compute(struct girodata_t* giro) {
-    float rateRoll = giro->gx / 65.4;
-    float ratePitch = giro->gy / 65.4;
-    float rateYaw = giro->gz / 65.4;
+    float rateRoll = giro->gx * 70.0 / 1000.0;
+    float ratePitch = giro->gy * 70.0 / 1000.0;
+    float rateYaw = giro->gz * 70.0 / 1000.0;
 
     float desiredRateRoll = 10.0;
     float desiredRatePitch = 5.0;
@@ -116,13 +116,13 @@ void Control_Compute(struct girodata_t* giro) {
     int baseThrottle = Control.base_throttle;
 
 
-    printf("Roll: %d;Pitch: %d;Yaw: %d\n", pidOutputRoll, pidOutputPitch, pidOutputYaw);
+    printf("Roll: %f;Pitch: %f;Yaw: %f\n", pidOutputRoll, pidOutputPitch, pidOutputYaw);
 
     if (baseThrottle <= MOTOR_MIN_SPEED) {
-        Control.motor_control.motor1_speed = 0;
-        Control.motor_control.motor2_speed = 0;
-        Control.motor_control.motor3_speed = 0;
-        Control.motor_control.motor4_speed = 0;
+        Control.motor_control.motor1_speed = MOTOR_MIN_SPEED;
+        Control.motor_control.motor2_speed = MOTOR_MIN_SPEED;
+        Control.motor_control.motor3_speed = MOTOR_MIN_SPEED;
+        Control.motor_control.motor4_speed = MOTOR_MIN_SPEED;
         return;
     };
 
@@ -178,6 +178,7 @@ void Control_Stop(void) {
     Control.motor_control.motor2_speed = 0;
     Control.motor_control.motor3_speed = 0;
     Control.motor_control.motor4_speed = 0;
+    Control_SetMotorSpeeds();
 
     printData("Motors stopped\n");
 }

@@ -8,60 +8,18 @@
 #define HMC5883L_ADDR 0x1E
 #define ITG3205_ADDR  0x68
 
+#define FIXED_DT 0.001f
+
 // Variables globales para sensores
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 int16_t mx, my, mz;
 extern I2C_HandleTypeDef hi2c1;
 
-// Estructura para el filtro de Kalman
-typedef struct {
-    float q;  // Varianza del proceso
-    float r;  // Varianza de la medida
-    float x;  // Valor estimado
-    float p;  // Varianza estimada
-    float k;  // Ganancia de Kalman
-} KalmanFilter;
+static Kalman_t kalman_pitch, kalman_roll; // Instancias del filtro Kalman
+static float pitch = 0.0f, roll = 0.0f;
 
-// Inicializa el filtro de Kalman
-void Kalman_Init(KalmanFilter* filter, float q, float r, float initial_value) {
-    filter->q = q;
-    filter->r = r;
-    filter->x = initial_value;
-    filter->p = 1.0;
-    filter->k = 0.0;
-}
 
-// Actualiza el filtro de Kalman con un nuevo valor medido
-float Kalman_Update(KalmanFilter* filter, float measurement) {
-    // Predicción
-    filter->p += filter->q;
-
-    // Actualización
-    filter->k = filter->p / (filter->p + filter->r);
-    filter->x += filter->k * (measurement - filter->x);
-    filter->p *= (1 - filter->k);
-
-    return filter->x;
-}
-
-// Filtros de Kalman para cada eje
-KalmanFilter kalman_ax, kalman_ay, kalman_az;
-KalmanFilter kalman_gx, kalman_gy, kalman_gz;
-KalmanFilter kalman_mx, kalman_my, kalman_mz;
-
-void Filters_Init() {
-    // Inicializamos los filtros con valores ajustados para ruido y varianza
-    Kalman_Init(&kalman_ax, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_ay, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_az, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_gx, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_gy, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_gz, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_mx, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_my, 0.001, 0.1, 0);
-    Kalman_Init(&kalman_mz, 0.001, 0.1, 0);
-}
 
 void GY85_Init() {
     uint8_t data;
@@ -83,6 +41,10 @@ void GY85_Init() {
     HAL_I2C_Mem_Write(&hi2c1, (ITG3205_ADDR << 1), 0x3E, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
     data = 0x18; // Configurar rango ±2000°/s
     HAL_I2C_Mem_Write(&hi2c1, (ITG3205_ADDR << 1), 0x16, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
+
+    CalibrateAccelerometer();
+    CalibrateGyroscope();
+    CalibrateMagnetometer();
 }
 
 
@@ -116,27 +78,179 @@ void Sensor_Read(struct girodata_t* giro) {
     ITG3205_ReadData(&giro->gx, &giro->gy, &giro->gz);
     HMC5883L_ReadData(&giro->mx, &giro->my, &giro->mz);
 
-  // Aplicar filtro de Kalman a cada eje
-//    giro->ax = Kalman_Update(&kalman_ax, giro->ax);
-//    giro->ay = Kalman_Update(&kalman_ay, giro->ay);
-//    giro->az = Kalman_Update(&kalman_az, giro->az);
-//    giro->gx = Kalman_Update(&kalman_gx, giro->gx);
-//    giro->gy = Kalman_Update(&kalman_gy, giro->gy);
-//    giro->gz = Kalman_Update(&kalman_gz, giro->gz);
-//    giro->mx = Kalman_Update(&kalman_mx, giro->mx);
-//    giro->my = Kalman_Update(&kalman_my, giro->my);
-//    giro->mz = Kalman_Update(&kalman_mz, giro->mz);
+    // Compensar datos
+    CompensateAccelerometer(&giro->ax, &giro->ay, &giro->az);
+    CompensateGyroscope(&giro->gx, &giro->gy, &giro->gz);
+    CompensateMagnetometer(&giro->mx, &giro->my, &giro->mz);
 
+}
+
+// Variables globales para compensación
+float accel_offset_x = 0, accel_offset_y = 0, accel_offset_z = 0;
+float gyro_offset_x = 0, gyro_offset_y = 0, gyro_offset_z = 0;
+// Variables globales para compensación
+float mag_min_x = 0, mag_max_x = 0;
+float mag_min_y = 0, mag_max_y = 0;
+float mag_min_z = 0, mag_max_z = 0;
+
+void CalibrateMagnetometer() {
+    mag_min_x = mag_min_y = mag_min_z = 32767;
+    mag_max_x = mag_max_y = mag_max_z = -32768;
+
+    for (int i = 0; i < 1000; i++) {
+        int16_t x, y, z;
+        HMC5883L_ReadData(&x, &y, &z);
+
+        if (x < mag_min_x) mag_min_x = x;
+        if (x > mag_max_x) mag_max_x = x;
+        if (y < mag_min_y) mag_min_y = y;
+        if (y > mag_max_y) mag_max_y = y;
+        if (z < mag_min_z) mag_min_z = z;
+        if (z > mag_max_z) mag_max_z = z;
+
+        HAL_Delay(10);
+    }
+}
+
+void CompensateMagnetometer(int16_t *x, int16_t *y, int16_t *z) {
+    *x = 2 * (*x - mag_min_x) / (mag_max_x - mag_min_x) - 1;
+    *y = 2 * (*y - mag_min_y) / (mag_max_y - mag_min_y) - 1;
+    *z = 2 * (*z - mag_min_z) / (mag_max_z - mag_min_z) - 1;
+}
+
+
+void CalibrateAccelerometer() {
+    int32_t sum_x = 0, sum_y = 0, sum_z = 0;
+    int samples = 1000;
+
+    for (int i = 0; i < samples; i++) {
+        int16_t x, y, z;
+        ADXL345_ReadData(&x, &y, &z);
+        sum_x += x;
+        sum_y += y;
+        sum_z += z;
+        HAL_Delay(5);  // Esperar un poco entre lecturas
+    }
+
+    accel_offset_x = sum_x / samples;
+    accel_offset_y = sum_y / samples;
+    accel_offset_z = (sum_z / samples) - 16384; // Compensar gravedad (1g ≈ 16384 en ±2g)
+}
+
+void CompensateAccelerometer(int16_t *x, int16_t *y, int16_t *z) {
+    *x -= accel_offset_x;
+    *y -= accel_offset_y;
+    *z -= accel_offset_z;
+}
+
+
+
+void CalibrateGyroscope() {
+    int32_t sum_x = 0, sum_y = 0, sum_z = 0;
+    int samples = 1000;
+
+    for (int i = 0; i < samples; i++) {
+        int16_t x, y, z;
+        ITG3205_ReadData(&x, &y, &z);
+        sum_x += x;
+        sum_y += y;
+        sum_z += z;
+        HAL_Delay(5);
+    }
+
+    gyro_offset_x = sum_x / samples;
+    gyro_offset_y = sum_y / samples;
+    gyro_offset_z = sum_z / samples;
+}
+
+void CompensateGyroscope(int16_t *x, int16_t *y, int16_t *z) {
+    *x -= gyro_offset_x;
+    *y -= gyro_offset_y;
+    *z -= gyro_offset_z;
 }
 
 
 
 
+void Kalman_Init(Kalman_t *kalman) {
+    kalman->angle = 0.0f;
+    kalman->bias = 0.0f;
+    kalman->rate = 0.0f;
+
+    kalman->P[0][0] = 0.0f;
+    kalman->P[0][1] = 0.0f;
+    kalman->P[1][0] = 0.0f;
+    kalman->P[1][1] = 0.0f;
+
+    kalman->Q_angle = 0.001f;
+    kalman->Q_bias = 0.003f;
+    kalman->R_measure = 0.03f;
+}
+
+
+float Kalman_GetAngle(Kalman_t *kalman, float newAngle, float newRate, float dt) {
+    // Paso de predicción
+    kalman->rate = newRate - kalman->bias;
+    kalman->angle += dt * kalman->rate;
+
+    kalman->P[0][0] += dt * (dt * kalman->P[1][1] - kalman->P[0][1] - kalman->P[1][0] + kalman->Q_angle);
+    kalman->P[0][1] -= dt * kalman->P[1][1];
+    kalman->P[1][0] -= dt * kalman->P[1][1];
+    kalman->P[1][1] += kalman->Q_bias * dt;
+
+    // Paso de corrección
+    float S = kalman->P[0][0] + kalman->R_measure; // Innovación
+    float K[2];                                   // Ganancia de Kalman
+    K[0] = kalman->P[0][0] / S;
+    K[1] = kalman->P[1][0] / S;
+
+    float y = newAngle - kalman->angle;           // Error de medida
+    kalman->angle += K[0] * y;
+    kalman->bias += K[1] * y;
+
+    float P00_temp = kalman->P[0][0];
+    float P01_temp = kalman->P[0][1];
+
+    kalman->P[0][0] -= K[0] * P00_temp;
+    kalman->P[0][1] -= K[0] * P01_temp;
+    kalman->P[1][0] -= K[1] * P00_temp;
+    kalman->P[1][1] -= K[1] * P01_temp;
+
+    return kalman->angle;
+}
+
+
+void Sensor_GetAngles(struct girodata_t* giro, Kalman_t* kalman_pitch, Kalman_t* kalman_roll, float* pitch, float* roll, float dt) {
+    // Calcular ángulos con el acelerómetro
+    float pitch_acc = atan2f((float)giro->ay, (float)giro->az) * 180 / M_PI;
+    float roll_acc = atan2f((float)-giro->ax, sqrtf((float)(giro->ay * giro->ay + giro->az * giro->az))) * 180 / M_PI;
+
+    // Obtener la velocidad angular del giroscopio
+    float ratePitch = (float)giro->gx / 131.0f; // Sensibilidad típica del giroscopio
+    float rateRoll = (float)giro->gy / 131.0f;
+
+    // Aplicar el filtro Kalman
+    *pitch = Kalman_GetAngle(kalman_pitch, pitch_acc, ratePitch, dt);
+    *roll = Kalman_GetAngle(kalman_roll, roll_acc, rateRoll, dt);
+}
+
+
+
+void printKalman(struct girodata_t* giro) {
+    // Leer datos de los sensores
+    Sensor_Read(giro);
+
+    // Calcular ángulos usando el filtro Kalman
+    Sensor_GetAngles(giro, &kalman_pitch, &kalman_roll, &pitch, &roll, FIXED_DT);
+
+    // Imprimir los resultados
+    printf("Pitch: %.2d, Roll: %.2d\n", pitch, roll);
+}
 void printGyro() {
     struct girodata_t giro;
     Sensor_Read(&giro);
 
-    printf("AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
+    //printf("AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
     // Calcular los ángulos de inclinación (roll, pitch) a partir de los datos del acelerómetro
     float roll = atan2f(giro.ay, giro.az) * 180.0 / M_PI;
     float pitch = atan2f(-giro.ax, sqrtf(giro.ay * giro.ay + giro.az * giro.az)) * 180.0 / M_PI;

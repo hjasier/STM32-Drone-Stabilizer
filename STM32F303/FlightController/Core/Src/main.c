@@ -135,18 +135,11 @@ int main(void)
 
 #if Calibrate
   Control_ArmMotors();
-//  Control_SetMotorsPower(10);
-//  HAL_Delay(3000);
-//  Control_SetMotorsPower(100);
-//  HAL_Delay(3000);
-//  Control_SetMotorsPower(0);
+
 
 #endif
-  HAL_TIM_Base_Start_IT(&htim3);
+  //HAL_TIM_Base_Start_IT(&htim3);
 
-
-   //Control_ArmMotors();
-   //Control_SetMotorsPower(10);
 
   /* USER CODE END 2 */
 
@@ -155,16 +148,12 @@ int main(void)
   while (1)
   {
 	if (control_update_flag) {
-		control_update_flag = 0;  // Limpiar bandera
-		Control_Update();         // Ejecutar la lógica fuera de la ISR
+		control_update_flag = 0;
+		Control_Update();
+//		struct girodata_t gyro;
+//		Sensor_Read(&gyro);
+//		printKalman(&gyro);
 	}
-	  //printGyro();
-	  //printMagnetometro();
-//	  printGiroscopio();
-//	  HAL_Delay(100);
-	  //printMagnetometro();
-	  //Sensor_Read();
-	  //Control_Update();
 
   }
 
