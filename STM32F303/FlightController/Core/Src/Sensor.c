@@ -116,7 +116,6 @@ void Sensor_Read(struct girodata_t* giro) {
     ITG3205_ReadData(&giro->gx, &giro->gy, &giro->gz);
     HMC5883L_ReadData(&giro->mx, &giro->my, &giro->mz);
 
-
   // Aplicar filtro de Kalman a cada eje
 //    giro->ax = Kalman_Update(&kalman_ax, giro->ax);
 //    giro->ay = Kalman_Update(&kalman_ay, giro->ay);

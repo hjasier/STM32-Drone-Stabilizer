@@ -18,6 +18,8 @@ typedef struct {
     PID pid_roll;
     PID pid_pitch;
     PID pid_yaw;
+    int base_throttle;
+
 
     struct {
         int motor1_speed;

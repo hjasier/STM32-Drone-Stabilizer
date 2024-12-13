@@ -32,6 +32,7 @@ void Control_Init(void) {
     Control.pid_roll.Kd = 0.0;
     Control.pid_roll.prev_error = 0.0;
     Control.pid_roll.integral = 0.0;
+    Control.base_throttle = 0;
 
     Control.pid_pitch.Kp = 1.0;
     Control.pid_pitch.Ki = 0.0;
@@ -74,9 +75,9 @@ void Control_Update(void) {
 }
 
 void Control_Compute(struct girodata_t* giro) {
-    float rateRoll = giro->gx / 16.4;
-    float ratePitch = giro->gy / 16.4;
-    float rateYaw = giro->gz / 16.4;
+    float rateRoll = giro->gx / 65.4;
+    float ratePitch = giro->gy / 65.4;
+    float rateYaw = giro->gz / 65.4;
 
     float desiredRateRoll = 10.0;
     float desiredRatePitch = 5.0;
@@ -114,15 +115,27 @@ void Control_Compute(struct girodata_t* giro) {
 
     int baseThrottle = Control.base_throttle;
 
+
+    printf("Roll: %d;Pitch: %d;Yaw: %d\n", pidOutputRoll, pidOutputPitch, pidOutputYaw);
+
+    if (baseThrottle <= MOTOR_MIN_SPEED) {
+        Control.motor_control.motor1_speed = 0;
+        Control.motor_control.motor2_speed = 0;
+        Control.motor_control.motor3_speed = 0;
+        Control.motor_control.motor4_speed = 0;
+        return;
+    };
+
+
     Control.motor_control.motor1_speed = baseThrottle + pidOutputPitch - pidOutputRoll - pidOutputYaw;
     Control.motor_control.motor2_speed = baseThrottle + pidOutputPitch + pidOutputRoll + pidOutputYaw;
     Control.motor_control.motor3_speed = baseThrottle - pidOutputPitch + pidOutputRoll - pidOutputYaw;
     Control.motor_control.motor4_speed = baseThrottle - pidOutputPitch - pidOutputRoll + pidOutputYaw;
 
-    Control.motor_control.motor1_speed = constrain(Control.motor_control.motor1_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
-    Control.motor_control.motor2_speed = constrain(Control.motor_control.motor2_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
-    Control.motor_control.motor3_speed = constrain(Control.motor_control.motor3_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
-    Control.motor_control.motor4_speed = constrain(Control.motor_control.motor4_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
+//    Control.motor_control.motor1_speed = constrain(Control.motor_control.motor1_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+//    Control.motor_control.motor2_speed = constrain(Control.motor_control.motor2_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+//    Control.motor_control.motor3_speed = constrain(Control.motor_control.motor3_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+//    Control.motor_control.motor4_speed = constrain(Control.motor_control.motor4_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
 
 }
 
@@ -149,14 +162,7 @@ void Control_SetMotorsPower(uint8_t base_power_percentage) {
 
     printf("Base power percentage: %d\n", base_power_percentage);
 
-    int base_power = MOTOR_MIN_SPEED + ((MOTOR_MAX_SPEED - MOTOR_MIN_SPEED) * base_power_percentage) / 100;
-
-    printf("Base power: %d\n", base_power);
-    Control.motor_control.motor1_speed = base_power;
-    Control.motor_control.motor2_speed = base_power;
-    Control.motor_control.motor3_speed = base_power;
-    Control.motor_control.motor4_speed = base_power;
-
+    Control.base_throttle = MOTOR_MIN_SPEED + ((MOTOR_MAX_SPEED - MOTOR_MIN_SPEED) * base_power_percentage) / 100;
 }
 
 void Control_SendMotorCommands(void) {
@@ -167,6 +173,7 @@ void Control_SendMotorCommands(void) {
 }
 
 void Control_Stop(void) {
+	Control.base_throttle = 0;
     Control.motor_control.motor1_speed = 0;
     Control.motor_control.motor2_speed = 0;
     Control.motor_control.motor3_speed = 0;

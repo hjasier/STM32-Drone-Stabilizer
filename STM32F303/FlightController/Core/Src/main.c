@@ -61,6 +61,8 @@ uint8_t rx_buffer[RX_BUFFER_SIZE];
 uint8_t temp_byte;          // Almacén temporal para el byte recibido
 volatile uint16_t write_index = 0;  // �?ndice de escritura en el buffer
 volatile uint16_t read_index = 0;
+uint8_t control_update_flag = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -140,7 +142,7 @@ int main(void)
 //  Control_SetMotorsPower(0);
 
 #endif
-  //HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim3);
 
 
    //Control_ArmMotors();
@@ -152,7 +154,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  printGyro();
+	if (control_update_flag) {
+		control_update_flag = 0;  // Limpiar bandera
+		Control_Update();         // Ejecutar la lógica fuera de la ISR
+	}
+	  //printGyro();
 	  //printMagnetometro();
 //	  printGiroscopio();
 //	  HAL_Delay(100);
