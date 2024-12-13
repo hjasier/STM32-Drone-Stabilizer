@@ -158,7 +158,6 @@ void Control_SetMotorsPower(uint8_t base_power_percentage) {
     Control.motor_control.motor3_speed = base_power;
     Control.motor_control.motor4_speed = base_power;
 
-    Control_Update();
 }
 
 void Control_SendMotorCommands(void) {
@@ -174,6 +173,5 @@ void Control_Stop(void) {
     Control.motor_control.motor3_speed = 0;
     Control.motor_control.motor4_speed = 0;
 
-    Control_Update();
     printData("Motors stopped\n");
 }

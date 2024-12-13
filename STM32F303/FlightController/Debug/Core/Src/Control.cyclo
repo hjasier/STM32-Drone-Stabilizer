@@ -5,5 +5,5 @@
 ../Core/Src/Control.c:119:7:pidCompute	3
 ../Core/Src/Control.c:133:6:Control_SetMotorSpeeds	5
 ../Core/Src/Control.c:147:6:Control_SetMotorsPower	2
-../Core/Src/Control.c:164:6:Control_SendMotorCommands	1
-../Core/Src/Control.c:171:6:Control_Stop	1
+../Core/Src/Control.c:162:6:Control_SendMotorCommands	1
+../Core/Src/Control.c:169:6:Control_Stop	1
