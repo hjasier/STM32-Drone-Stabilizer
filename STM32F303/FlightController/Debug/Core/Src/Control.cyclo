@@ -1,9 +1,8 @@
 ../Core/Src/Control.c:27:6:Control_Init	1
 ../Core/Src/Control.c:47:6:Control_ArmMotors	1
 ../Core/Src/Control.c:65:6:Control_Update	1
-../Core/Src/Control.c:75:6:Control_Compute	2
-../Core/Src/Control.c:119:7:pidCompute	3
-../Core/Src/Control.c:133:6:Control_SetMotorSpeeds	5
-../Core/Src/Control.c:147:6:Control_SetMotorsPower	2
-../Core/Src/Control.c:162:6:Control_SendMotorCommands	1
-../Core/Src/Control.c:169:6:Control_Stop	1
+../Core/Src/Control.c:75:6:Control_Compute	1
+../Core/Src/Control.c:83:6:Control_SetMotorSpeeds	5
+../Core/Src/Control.c:97:6:Control_SetMotorsPower	2
+../Core/Src/Control.c:113:6:Control_SendMotorCommands	1
+../Core/Src/Control.c:120:6:Control_Stop	1

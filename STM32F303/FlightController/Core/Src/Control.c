@@ -24,6 +24,8 @@ float my_buffer[MOVING_AVG_SIZE] = {0};
 float mz_buffer[MOVING_AVG_SIZE] = {0};
 int buffer_index = 0;
 
+
+
 void Control_Init(void) {
     Control.pid_roll.Kp = 1.0;
     Control.pid_roll.Ki = 0.0;
@@ -64,7 +66,6 @@ void Control_ArmMotors() {
 
 void Control_Update(void) {
 	struct girodata_t giro;
-
 	Sensor_Read(&giro);
 	printf("AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
     Control_Compute(&giro);
@@ -73,62 +74,60 @@ void Control_Update(void) {
 }
 
 void Control_Compute(struct girodata_t* giro) {
-    // Filtro complementario para roll y pitch
-    float roll_acc = atan2(giro->ay, giro->az) * 180.0 / M_PI;
-    float pitch_acc = atan2(-giro->ax, sqrt(giro->ay * giro->ay + giro->az * giro->az)) * 180.0 / M_PI;
+    float rateRoll = giro->gx / 16.4;
+    float ratePitch = giro->gy / 16.4;
+    float rateYaw = giro->gz / 16.4;
 
-    roll_filtered = ALPHA * (roll_filtered + giro->gx * 0.01) + (1 - ALPHA) * roll_acc;
-    pitch_filtered = ALPHA * (pitch_filtered + giro->gy * 0.01) + (1 - ALPHA) * pitch_acc;
+    float desiredRateRoll = 10.0;
+    float desiredRatePitch = 5.0;
+    float desiredRateYaw = 0.0;
 
-    // Filtro de promedio móvil para yaw (usando magnetómetro)
-    mx_buffer[buffer_index] = giro->mx;
-    my_buffer[buffer_index] = giro->my;
-    mz_buffer[buffer_index] = giro->mz;
-    buffer_index = (buffer_index + 1) % MOVING_AVG_SIZE;
+    // Error
+    float errorRoll = desiredRateRoll - rateRoll;
+    float errorPitch = desiredRatePitch - ratePitch;
+    float errorYaw = desiredRateYaw - rateYaw;
 
-    float mx_avg = 0, my_avg = 0, mz_avg = 0;
-    for (int i = 0; i < MOVING_AVG_SIZE; i++) {
-        mx_avg += mx_buffer[i];
-        my_avg += my_buffer[i];
-        mz_avg += mz_buffer[i];
-    }
-    mx_avg /= MOVING_AVG_SIZE;
-    my_avg /= MOVING_AVG_SIZE;
-    mz_avg /= MOVING_AVG_SIZE;
+    // PID Roll
+    float pTermRoll = Control.pid_roll.Kp * errorRoll;
+    Control.pid_roll.integral += errorRoll; // Acumulador integral
+    float iTermRoll = Control.pid_roll.Ki * Control.pid_roll.integral;
+    float dTermRoll = Control.pid_roll.Kd * (errorRoll - Control.pid_roll.prev_error);
+    Control.pid_roll.prev_error = errorRoll;
+    float pidOutputRoll = pTermRoll + iTermRoll + dTermRoll;
 
-    yaw_filtered = atan2(my_avg, mx_avg) * 180.0 / M_PI;
+    // PID Pitch
+    float pTermPitch = Control.pid_pitch.Kp * errorPitch;
+    Control.pid_pitch.integral += errorPitch;
+    float iTermPitch = Control.pid_pitch.Ki * Control.pid_pitch.integral;
+    float dTermPitch = Control.pid_pitch.Kd * (errorPitch - Control.pid_pitch.prev_error);
+    Control.pid_pitch.prev_error = errorPitch;
+    float pidOutputPitch = pTermPitch + iTermPitch + dTermPitch;
 
-    // Error de cada eje
-    float roll_error = 0 - roll_filtered;
-    float pitch_error = 0 - pitch_filtered;
-    float yaw_error = 0 - yaw_filtered;
+    // PID Yaw
+    float pTermYaw = Control.pid_yaw.Kp * errorYaw;
+    Control.pid_yaw.integral += errorYaw;
+    float iTermYaw = Control.pid_yaw.Ki * Control.pid_yaw.integral;
+    float dTermYaw = Control.pid_yaw.Kd * (errorYaw - Control.pid_yaw.prev_error);
+    Control.pid_yaw.prev_error = errorYaw;
+    float pidOutputYaw = pTermYaw + iTermYaw + dTermYaw;
 
-    printf("Roll: %d, Pitch: %d, Yaw: %d\n", roll_filtered, pitch_filtered, yaw_filtered);
 
-    Control.motor_control.motor1_speed = pidCompute(&Control.pid_roll, roll_error);
-    Control.motor_control.motor2_speed = pidCompute(&Control.pid_pitch, pitch_error);
-    Control.motor_control.motor3_speed = pidCompute(&Control.pid_yaw, yaw_error);
-    Control.motor_control.motor4_speed = pidCompute(&Control.pid_roll, roll_error);
+    int baseThrottle = Control.base_throttle;
 
-    printf("Motor 1 speed: %d\n", Control.motor_control.motor1_speed);
-    printf("Motor 2 speed: %d\n", Control.motor_control.motor2_speed);
-    printf("Motor 3 speed: %d\n", Control.motor_control.motor3_speed);
+    Control.motor_control.motor1_speed = baseThrottle + pidOutputPitch - pidOutputRoll - pidOutputYaw;
+    Control.motor_control.motor2_speed = baseThrottle + pidOutputPitch + pidOutputRoll + pidOutputYaw;
+    Control.motor_control.motor3_speed = baseThrottle - pidOutputPitch + pidOutputRoll - pidOutputYaw;
+    Control.motor_control.motor4_speed = baseThrottle - pidOutputPitch - pidOutputRoll + pidOutputYaw;
+
+    Control.motor_control.motor1_speed = constrain(Control.motor_control.motor1_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
+    Control.motor_control.motor2_speed = constrain(Control.motor_control.motor2_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
+    Control.motor_control.motor3_speed = constrain(Control.motor_control.motor3_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
+    Control.motor_control.motor4_speed = constrain(Control.motor_control.motor4_speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
 
 }
 
-float pidCompute(PID* pid, float error) {
-    pid->integral += error;
-    float derivative = error - pid->prev_error;
 
-    float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
 
-    pid->prev_error = error;
-
-    if (output > MOTOR_MAX_SPEED) output = MOTOR_MAX_SPEED;
-    if (output < MOTOR_MIN_SPEED) output = MOTOR_MIN_SPEED;
-
-    return output;
-}
 
 void Control_SetMotorSpeeds(void) {
     int motor1_speed = (Control.motor_control.motor1_speed < 0) ? 0 : (Control.motor_control.motor1_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor1_speed);

@@ -140,7 +140,7 @@ int main(void)
 //  Control_SetMotorsPower(0);
 
 #endif
-  HAL_TIM_Base_Start_IT(&htim3);
+  //HAL_TIM_Base_Start_IT(&htim3);
 
 
    //Control_ArmMotors();
@@ -152,6 +152,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  printGyro();
 	  //printMagnetometro();
 //	  printGiroscopio();
 //	  HAL_Delay(100);
