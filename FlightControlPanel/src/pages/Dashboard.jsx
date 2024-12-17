@@ -4,11 +4,11 @@ import DroneImage from '../assets/drone.png';
 import Prop from '../assets/prop.png';
 import ThreeDModel from '../components/ThreeDModel';
 
-const PropellerIcon = () => (
+const PropellerIcon = ({animate}) => (
   <svg viewBox="0 0 100 100" className="w-16 h-16">
     <circle cx="50" cy="50" r="45" stroke="white" fill="none" strokeWidth="2"/>
     <g transform="translate(55,50)">
-      <image className='animate-spin' href={Prop} x="-35" y="-35" width="70" height="52" />
+      <image className={animate&&'animate-spin'} href={Prop} x="-35" y="-35" width="70" height="52" />
     </g>
   </svg>
 );
@@ -74,10 +74,10 @@ const Dashboard = () => {
  
   // State for all dynamic values
   const [propellers, setPropellers] = useState([
-    { id: 'PROP 1', speed: 65 },
-    { id: 'PROP 2', speed: 65 },
-    { id: 'PROP 3', speed: 55 },
-    { id: 'PROP 4', speed: 55 },
+    { id: 'PROP 1', speed: 0 },
+    { id: 'PROP 2', speed: 0 },
+    { id: 'PROP 3', speed: 0 },
+    { id: 'PROP 4', speed: 0 },
   ]);
   
   const [masterControl, setMasterControl] = useState(55);
@@ -93,16 +93,16 @@ const Dashboard = () => {
   const variation = (base, range) => base + (Math.random() - 0.5) * range;
   
   // Update propeller speeds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPropellers(prev => prev.map(prop => ({
-        ...prop,
-        speed: Math.min(100, Math.max(0, variation(prop.speed, 10)))
-      })));
-      setMasterControl(prev => Math.min(100, Math.max(0, variation(prev, 5))));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setPropellers(prev => prev.map(prop => ({
+  //       ...prop,
+  //       speed: Math.min(100, Math.max(0, variation(prop.speed, 10)))
+  //     })));
+  //     setMasterControl(prev => Math.min(100, Math.max(0, variation(prev, 5))));
+  //   }, 1000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // Update speeds
   useEffect(() => {
@@ -127,27 +127,27 @@ const Dashboard = () => {
   }, [gyro]);
 
   // Update graph data
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setGraphData(prev => {
-  //       const newData = [...prev, variation(50, 20)];
-  //       return newData.slice(-50);
-  //     });
-  //   }, 200);
-  //   return () => clearInterval(interval);
-  // }, []);
-
   useEffect(() => {
     const interval = setInterval(() => {
       setGraphData(prev => {
-        // Solo agregamos el valor de GY si es un número válido
-        const newData = [...prev, gyro.GY/70/1000];
-        return newData.slice(-50); // Mantener solo los últimos 50 datos
+        const newData = [...prev, variation(50, 20)];
+        return newData.slice(-50);
       });
     }, 200);
-  
     return () => clearInterval(interval);
-  }, [gyro]);
+  }, []);
+
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setGraphData(prev => {
+  //       // Solo agregamos el valor de GY si es un número válido
+  //       const newData = [...prev, gyro.GY/70/1000];
+  //       return newData.slice(-50); // Mantener solo los últimos 50 datos
+  //     });
+  //   }, 200);
+  
+  //   return () => clearInterval(interval);
+  // }, [gyro]);
 
   // Custom Control Handlers
   const handleCustomIncrease = () => {
@@ -187,20 +187,35 @@ const Dashboard = () => {
     };
 
     ws.onmessage = (event) => {
-      //console.log('Message received:', event.data);
-      setValorRecibido(event.data); // Update state with received message
 
-      const data = event.data.split(',').reduce((acc, item) => {
-        const [key, value] = item.split(':').map(str => str.trim());
-        acc[key] = parseInt(value, 10); // Convertir los valores a enteros
-        return acc;
-      }, {});
-    
-      // Actualizar el estado con los nuevos datos
+    console.log('Mensaje recibido:', event.data);
+
+    const data = event.data.split(',').reduce((acc, item) => {
+      const [key, value] = item.split(':').map(str => str.trim());
+      acc[key] = parseInt(value, 10); // Convertir los valores a enteros
+      return acc;
+    }, {});
+
+    // Detectar el tipo de datos recibido
+    if (data.AX !== undefined || data.GX !== undefined) {
+      // Es un mensaje de giroscopio
       setGyro(data);
-
-      console.log('Gyro:', data);
-    };
+      console.log('Gyro data:', data);
+    } else if (data.M1 !== undefined || data.M2 !== undefined) {
+      // Es un mensaje de velocidades de motores
+      const updatedPropellers = propellers.map((prop, index) => {
+        const motorKey = `M${index + 1}`;
+        return {
+          ...prop,
+          speed: data[motorKey] !== undefined ? data[motorKey]-100 : prop.speed,
+        };
+      });
+      setPropellers(updatedPropellers);
+      console.log('Updated propellers:', updatedPropellers);
+    } else {
+      console.warn('Datos no reconocidos:', data);
+    }
+  };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
@@ -256,7 +271,7 @@ const Dashboard = () => {
                     <div className="flex flex-col items-center">
                       <span className="text-xs mb-1">{prop.id}</span>
                       <div className="bg-black rounded-full p-1">
-                        <PropellerIcon />
+                        <PropellerIcon animate={prop.speed>100} />
                       </div>
                     </div>
                     <div className="flex flex-col items-center">
