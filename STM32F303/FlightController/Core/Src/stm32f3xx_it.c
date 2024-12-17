@@ -41,7 +41,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,10 +206,20 @@ void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
 
-  /* USER CODE END TIM3_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim3);
-  /* USER CODE BEGIN TIM3_IRQn 1 */
-  control_update_flag = 1;
+	/* USER CODE END TIM3_IRQn 0 */
+	HAL_TIM_IRQHandler(&htim3);
+	/* USER CODE BEGIN TIM3_IRQn 1 */
+	control_update_flag = 1;
+
+	//cada 300 ticks enviar datos
+	if (sendDelay == 150) {
+		sendDelay = 0;
+		send_data_flag = 1;
+
+	}
+
+
+	sendDelay++;
   /* USER CODE END TIM3_IRQn 1 */
 }
 

@@ -62,6 +62,9 @@ uint8_t temp_byte;          // Almacén temporal para el byte recibido
 volatile uint16_t write_index = 0;  // �?ndice de escritura en el buffer
 volatile uint16_t read_index = 0;
 uint8_t control_update_flag = 0;
+uint8_t send_data_flag = 0;
+uint16_t sendDelay = 0;
+
 
 /* USER CODE END PV */
 
@@ -138,7 +141,8 @@ int main(void)
 
 
 #endif
-  //HAL_TIM_Base_Start_IT(&htim3);
+  printData("Iniciando pulso de estabilizador\n");
+  HAL_TIM_Base_Start_IT(&htim3);
 
 
   /* USER CODE END 2 */
@@ -153,6 +157,12 @@ int main(void)
 //		struct girodata_t gyro;
 //		Sensor_Read(&gyro);
 //		printKalman(&gyro);
+	}
+
+	if (send_data_flag) {
+		send_data_flag = 0;
+		//sendAngles();
+		sendSensorData();
 	}
 
   }

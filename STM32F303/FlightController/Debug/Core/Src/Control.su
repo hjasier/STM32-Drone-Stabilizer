@@ -1,8 +1,9 @@
 ../Core/Src/Control.c:29:6:Control_Init	4	static
 ../Core/Src/Control.c:50:6:Control_ArmMotors	8	static
-../Core/Src/Control.c:68:6:Control_Update	72	static
+../Core/Src/Control.c:68:6:Control_Update	32	static
 ../Core/Src/Control.c:77:6:Control_Compute	136	static
-../Core/Src/Control.c:145:6:Control_SetMotorSpeeds	32	static
-../Core/Src/Control.c:159:6:Control_SetMotorsPower	16	static
-../Core/Src/Control.c:168:6:Control_SendMotorCommands	8	static
-../Core/Src/Control.c:175:6:Control_Stop	8	static
+../Core/Src/Control.c:143:6:Control_GetMotorSpeeds	32	static
+../Core/Src/Control.c:153:6:Control_SetMotorSpeeds	24	static
+../Core/Src/Control.c:167:6:Control_SetMotorsPower	16	static
+../Core/Src/Control.c:176:6:Control_SendMotorCommands	8	static
+../Core/Src/Control.c:183:6:Control_Stop	8	static

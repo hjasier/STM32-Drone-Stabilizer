@@ -2,6 +2,7 @@
 #define COMUNICATION_H
 
 #include "main.h"
+#include "Sensor.h"
 
 // Inicialización de UART
 void UART_Init(void);

@@ -48,13 +48,13 @@ void Control_Init(void) {
 }
 
 void Control_ArmMotors() {
-	printf("Hadoken");
-    Control.motor_control.motor1_speed = MOTOR_MAX_SPEED;
-    Control.motor_control.motor2_speed = MOTOR_MAX_SPEED;
-    Control.motor_control.motor3_speed = MOTOR_MAX_SPEED;
-    Control.motor_control.motor4_speed = MOTOR_MAX_SPEED;
-    Control_SetMotorSpeeds();
-    HAL_Delay(3000);
+	printf("Armando motores\n");
+//    Control.motor_control.motor1_speed = MOTOR_MAX_SPEED;
+//    Control.motor_control.motor2_speed = MOTOR_MAX_SPEED;
+//    Control.motor_control.motor3_speed = MOTOR_MAX_SPEED;
+//    Control.motor_control.motor4_speed = MOTOR_MAX_SPEED;
+//    Control_SetMotorSpeeds();
+//    HAL_Delay(3000);
     Control.motor_control.motor1_speed = MOTOR_MIN_SPEED;
     Control.motor_control.motor2_speed = MOTOR_MIN_SPEED;
     Control.motor_control.motor3_speed = MOTOR_MIN_SPEED;
@@ -68,7 +68,7 @@ void Control_ArmMotors() {
 void Control_Update(void) {
 	struct girodata_t giro;
 	Sensor_Read(&giro);
-	printf("AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
+	//printf("AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
     Control_Compute(&giro);
 
     Control_SetMotorSpeeds();
@@ -140,6 +140,14 @@ void Control_Compute(struct girodata_t* giro) {
 }
 
 
+void Control_GetMotorSpeeds(char* buffer, size_t buffer_size) {
+    snprintf(buffer, buffer_size, "M1: %d, M2: %d, M3: %d, M4: %d\n",
+             Control.motor_control.motor1_speed,
+             Control.motor_control.motor2_speed,
+             Control.motor_control.motor3_speed,
+             Control.motor_control.motor4_speed);
+}
+
 
 
 void Control_SetMotorSpeeds(void) {
@@ -153,7 +161,7 @@ void Control_SetMotorSpeeds(void) {
     TIM2->CCR1 = motor3_speed;
     TIM2->CCR2 = motor4_speed;
 
-    printf("Motor Speeds: %d, %d, %d, %d\n", motor1_speed, motor2_speed, motor3_speed, motor4_speed);
+    //printf("Motor Speeds: %d, %d, %d, %d\n", motor1_speed, motor2_speed, motor3_speed, motor4_speed);
 }
 
 void Control_SetMotorsPower(uint8_t base_power_percentage) {

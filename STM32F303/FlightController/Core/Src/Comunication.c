@@ -7,23 +7,47 @@ void UART_Init(void) {
     HAL_UART_Init(&huart1); // ya se hace en el main así que creo que no hace falta
 }
 
+void sendAngles() {
+	struct girodata_t giro;
+	Sensor_Read(&giro);
+
+	float rateRoll = giro.gx * 70.0 / 1000.0;
+	float ratePitch = giro.gy * 70.0 / 1000.0;
+	float rateYaw = giro.gz * 70.0 / 1000.0;
+
+
+    char data_msg[128];
+    snprintf(data_msg, sizeof(data_msg), "Roll: %f;Pitch: %f;Yaw: %f\n", rateRoll, ratePitch, rateYaw);
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)data_msg, strlen(data_msg), HAL_MAX_DELAY);
+
+
+}
+
+
+
 // Función para enviar datos de los sensores al ESP8266
 void sendSensorData(void) {
+    struct girodata_t giro;
+
+
+    Sensor_Read(&giro);
+
     char data_msg[128];
 
-    int16_t ax, ay, az;
-    int16_t gx, gy, gz;
-    int16_t mx, my, mz;
+    snprintf(data_msg, sizeof(data_msg), "AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
 
-    ADXL345_ReadData(&ax, &ay, &az);  // Leer datos acelerómetro
-    ITG3205_ReadData(&gx, &gy, &gz);  // Leer datos giroscopio
-    HMC5883L_ReadData(&mx, &my, &mz);  // Leer datos magnetómetro
-
-    snprintf(data_msg, sizeof(data_msg), "ACCX:%d ACCY:%d ACCZ:%d GYX:%d GYY:%d GYZ:%d MAGX:%d MAGY:%d MAGZ:%d\r\n",
-             ax, ay, az, gx, gy, gz, mx, my, mz);
-
+    //printf(data_msg);
     // Enviar los datos a través de UART
     HAL_UART_Transmit(&huart1, (uint8_t*)data_msg, strlen(data_msg), HAL_MAX_DELAY);
+
+    char speeds[125];
+    Control_GetMotorSpeeds(speeds, sizeof(speeds));
+
+    printf("Motor speeds: %s\n", speeds);
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)speeds, strlen(speeds), HAL_MAX_DELAY);
+
 }
 
 // Función para enviar un comando de control al ESP8266 (ejemplo: "start", "stop", "set_speed 100")

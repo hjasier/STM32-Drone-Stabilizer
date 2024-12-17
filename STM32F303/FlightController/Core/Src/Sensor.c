@@ -22,6 +22,7 @@ static float pitch = 0.0f, roll = 0.0f;
 
 
 void GY85_Init() {
+	printf("Iniciando sensores\n");
     uint8_t data;
 
     // Inicializar el acelerómetro (ADXL345)
@@ -42,9 +43,11 @@ void GY85_Init() {
     data = 0x18; // Configurar rango ±2000°/s
     HAL_I2C_Mem_Write(&hi2c1, (ITG3205_ADDR << 1), 0x16, I2C_MEMADD_SIZE_8BIT, &data, 1, HAL_MAX_DELAY);
 
+    printf("Calibrando sensores\n");
     CalibrateAccelerometer();
     CalibrateGyroscope();
     CalibrateMagnetometer();
+    printf("Sensores calibrados\n");
 }
 
 

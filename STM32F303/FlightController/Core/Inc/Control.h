@@ -43,4 +43,6 @@ void Control_ArmMotors();
 void Control_Stop(void);
 float pidCompute(PID* pid, float error);
 
+void Control_GetMotorSpeeds(char* buffer, size_t buffer_size);
+
 #endif // CONTROL_H

@@ -72,6 +72,8 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 extern uint8_t control_update_flag;
+extern uint8_t send_data_flag;
+extern uint16_t sendDelay;
 
 /* USER CODE END Private defines */
 
