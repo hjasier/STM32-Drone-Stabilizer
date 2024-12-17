@@ -2,3 +2,6 @@
 ESP8266/DroneWifiController/include/config.h
 
 FlightControlPanel/public/model.obj
+ESP32/include/config.h
+ESP8266/DroneWifiController/include/config.h
+ESP8266/DroneWifiController/include/config.h

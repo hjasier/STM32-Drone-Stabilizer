@@ -5,7 +5,19 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import * as THREE from 'three';
 
-export default function ThreeDModel() {
+
+function calculateRotation(gyro) {
+  const rotation = {
+    x: THREE.MathUtils.degToRad(gyro.GX/70-70),
+    y: THREE.MathUtils.degToRad(gyro.GY/70),
+    z: THREE.MathUtils.degToRad(gyro.GZ/70-45)
+  };
+  return rotation;
+}
+
+
+
+export default function ThreeDModel({gyro}) {
   // Carga el archivo MTL (material)
   const materials = useLoader(MTLLoader, '/model.mtl');
 
@@ -14,6 +26,9 @@ export default function ThreeDModel() {
     materials.preload();
     loader.setMaterials(materials);
   });
+
+  // Calcula la rotación del modelo
+  obj.rotation.setFromVector3(calculateRotation(gyro));
 
   return (
     <Canvas>
