@@ -29,7 +29,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define Calibrate 0
+#define Calibrate 1
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -47,6 +47,7 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -55,7 +56,13 @@ UART_HandleTypeDef huart2;
 #define ADXL345_ADDR  0x53
 #define HMC5883L_ADDR 0x1E
 #define ITG3205_ADDR  0x68
-uint8_t rx_buffer[4];
+#define RX_BUFFER_SIZE 128  // Tamaño del buffer circular
+uint8_t rx_buffer[RX_BUFFER_SIZE];
+uint8_t temp_byte;          // Almacén temporal para el byte recibido
+volatile uint16_t write_index = 0;  // �?ndice de escritura en el buffer
+volatile uint16_t read_index = 0;
+uint8_t control_update_flag = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,6 +73,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 #define OPT_MEM 1
@@ -111,9 +119,10 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   // Inicializar el sensor GY-85
-  GY85_Init();//Acelerometro
+  GY85_Init();
 
   Control_Init();
 
@@ -124,19 +133,12 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
-  Control_SetMotorsPower(10);
 #if Calibrate
-  TIM1->CCR4 = 0;
-  HAL_Delay (3000);
-  TIM1->CCR4 = 100;
-  HAL_Delay (1000);
-  for (uint8_t i=0; i< 120; i++)
-  {
-	  TIM1->CCR4 =100+i;
-	  HAL_Delay (100);
-  }
-    TIM1->CCR4 = 100;
+  Control_ArmMotors();
+
+
 #endif
+  //HAL_TIM_Base_Start_IT(&htim3);
 
 
   /* USER CODE END 2 */
@@ -145,9 +147,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	if (control_update_flag) {
+		control_update_flag = 0;
+		Control_Update();
+//		struct girodata_t gyro;
+//		Sensor_Read(&gyro);
+//		printKalman(&gyro);
+	}
 
-	  Control_Update();
-	  HAL_Delay(100);
   }
 
     /* USER CODE END WHILE */
@@ -398,6 +405,51 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 8-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1000-1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -510,31 +562,40 @@ void sendData(char* data) {
   HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
 }
 
+int _write(int file, char *data, int len) {
+    HAL_UART_Transmit(&huart2, (uint8_t*)data, len, HAL_MAX_DELAY);
+    return len;
+}
 
 
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//
-//    // Verificar si la interrupción proviene de USART1
-//    if (huart->Instance == USART1) {
-//    	printData((char *)rx_buffer);
-//
-//        // Comparar el contenido del búfer recibido
-//        if (strncmp((char *)rx_buffer, "ON", 2) == 0) {
-//            // Encender el LED (PB3)
-//            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
-//        } else if (strncmp((char *)rx_buffer, "OFF", 3) == 0) {
-//            // Apagar el LED (PB3)
-//            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
-//        }
-//
-//        // Limpiar el búfer y esperar nuevos datos
-//        memset(rx_buffer, 0, sizeof(rx_buffer));
-//
-//        // Volver a habilitar la recepción UART en modo interrupción
-//        HAL_UART_Receive_IT(&huart1, rx_buffer, sizeof(rx_buffer));
-//    }
-//}
+// Función que se llama cuando un byte es recibido
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	//Control_Update();// por probar
+    if (huart->Instance == USART1) {
+        // Almacenar el byte recibido en el buffer circular
+        rx_buffer[write_index++] = temp_byte;
+
+        // Asegurar que el índice no se desborde
+        if (write_index >= RX_BUFFER_SIZE) {
+            write_index = 0;
+        }
+
+        // Si el byte recibido es un delimitador (por ejemplo, '\n'), procesamos el mensaje
+        if (temp_byte == '\n') {
+            // Procesar el buffer hasta la posición de lectura
+            uint16_t length = (write_index > read_index) ? (write_index - read_index) : (RX_BUFFER_SIZE - read_index + write_index);
+            receiveControlCommand(&rx_buffer[read_index], length);
+
+            // Avanzar el índice de lectura
+            read_index = write_index;
+        }
+
+        // Continuar recibiendo el siguiente byte
+        HAL_UART_Receive_IT(&huart1, &temp_byte, 1);
+    }
+}
+
+
 /* USER CODE END 4 */
 
 /**

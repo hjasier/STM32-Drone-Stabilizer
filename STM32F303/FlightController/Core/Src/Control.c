@@ -3,14 +3,27 @@
 #include <math.h>
 #include <stdio.h>
 
-#define MOTOR_MAX_SPEED 1000
-#define MOTOR_MIN_SPEED 0
+#define MOTOR_MAX_SPEED 200
+#define MOTOR_MIN_SPEED 100
+
+#define ALPHA 0.98  // Coeficiente del filtro complementario
+#define MOVING_AVG_SIZE 5
 
 Control_t Control;
 
 extern int16_t ax, ay, az;
 extern int16_t gx, gy, gz;
 extern int16_t mx, my, mz;
+
+float roll_filtered = 0.0;
+float pitch_filtered = 0.0;
+float yaw_filtered = 0.0;
+
+float mx_buffer[MOVING_AVG_SIZE] = {0};
+float my_buffer[MOVING_AVG_SIZE] = {0};
+float mz_buffer[MOVING_AVG_SIZE] = {0};
+int buffer_index = 0;
+
 
 
 void Control_Init(void) {
@@ -19,6 +32,7 @@ void Control_Init(void) {
     Control.pid_roll.Kd = 0.0;
     Control.pid_roll.prev_error = 0.0;
     Control.pid_roll.integral = 0.0;
+    Control.base_throttle = 0;
 
     Control.pid_pitch.Kp = 1.0;
     Control.pid_pitch.Ki = 0.0;
@@ -33,81 +47,138 @@ void Control_Init(void) {
     Control.pid_yaw.integral = 0.0;
 }
 
+void Control_ArmMotors() {
+	printf("Hadoken");
+    Control.motor_control.motor1_speed = MOTOR_MAX_SPEED;
+    Control.motor_control.motor2_speed = MOTOR_MAX_SPEED;
+    Control.motor_control.motor3_speed = MOTOR_MAX_SPEED;
+    Control.motor_control.motor4_speed = MOTOR_MAX_SPEED;
+    Control_SetMotorSpeeds();
+    HAL_Delay(3000);
+    Control.motor_control.motor1_speed = MOTOR_MIN_SPEED;
+    Control.motor_control.motor2_speed = MOTOR_MIN_SPEED;
+    Control.motor_control.motor3_speed = MOTOR_MIN_SPEED;
+    Control.motor_control.motor4_speed = MOTOR_MIN_SPEED;
+    Control_SetMotorSpeeds();
+    HAL_Delay(3000);
+
+    printData("Motors armed\n");
+}
 
 void Control_Update(void) {
-    //Control_Compute(ax, ay, az, gx, gy, gz, mx, my, mz);
+	struct girodata_t giro;
+	Sensor_Read(&giro);
+	printf("AX: %i, AY: %i, AZ: %i, GX: %i, GY: %i, GZ: %i, MX: %i, MY: %i, MZ: %i\n", giro.ax, giro.ay, giro.az, giro.gx, giro.gy, giro.gz, giro.mx, giro.my, giro.mz);
+    Control_Compute(&giro);
 
     Control_SetMotorSpeeds();
-
-    //Control_SendMotorCommands();
 }
 
-// Calcular la estabilización usando los datos de los sensores (acelerómetro, giroscopio, magnetómetro)
-void Control_Compute(int ax, int ay, int az, int gx, int gy, int gz, int mx, int my, int mz) {
-	float roll = atan2(ay, az) * 180.0 / M_PI;
-    float pitch = atan2(-ax, sqrt(ay * ay + az * az)) * 180.0 / M_PI;
-    float yaw = atan2(my, mx) * 180.0 / M_PI;
+void Control_Compute(struct girodata_t* giro) {
+    float rateRoll = giro->gx * 70.0 / 1000.0;
+    float ratePitch = giro->gy * 70.0 / 1000.0;
+    float rateYaw = giro->gz * 70.0 / 1000.0;
 
-    // error de cada eje
-    float roll_error = 0 - roll;  // Queremos que el roll sea 0
-    float pitch_error = 0 - pitch;  // Queremos que el pitch sea 0
-    float yaw_error = 0 - yaw;  // Queremos que el yaw sea 0
+    float desiredRateRoll = 10.0;
+    float desiredRatePitch = 5.0;
+    float desiredRateYaw = 0.0;
 
-    Control.motor_control.motor1_speed = pidCompute(&Control.pid_roll, roll_error);
-    Control.motor_control.motor2_speed = pidCompute(&Control.pid_pitch, pitch_error);
-    Control.motor_control.motor3_speed = pidCompute(&Control.pid_yaw, yaw_error);
+    // Error
+    float errorRoll = desiredRateRoll - rateRoll;
+    float errorPitch = desiredRatePitch - ratePitch;
+    float errorYaw = desiredRateYaw - rateYaw;
+
+    // PID Roll
+    float pTermRoll = Control.pid_roll.Kp * errorRoll;
+    Control.pid_roll.integral += errorRoll; // Acumulador integral
+    float iTermRoll = Control.pid_roll.Ki * Control.pid_roll.integral;
+    float dTermRoll = Control.pid_roll.Kd * (errorRoll - Control.pid_roll.prev_error);
+    Control.pid_roll.prev_error = errorRoll;
+    float pidOutputRoll = pTermRoll + iTermRoll + dTermRoll;
+
+    // PID Pitch
+    float pTermPitch = Control.pid_pitch.Kp * errorPitch;
+    Control.pid_pitch.integral += errorPitch;
+    float iTermPitch = Control.pid_pitch.Ki * Control.pid_pitch.integral;
+    float dTermPitch = Control.pid_pitch.Kd * (errorPitch - Control.pid_pitch.prev_error);
+    Control.pid_pitch.prev_error = errorPitch;
+    float pidOutputPitch = pTermPitch + iTermPitch + dTermPitch;
+
+    // PID Yaw
+    float pTermYaw = Control.pid_yaw.Kp * errorYaw;
+    Control.pid_yaw.integral += errorYaw;
+    float iTermYaw = Control.pid_yaw.Ki * Control.pid_yaw.integral;
+    float dTermYaw = Control.pid_yaw.Kd * (errorYaw - Control.pid_yaw.prev_error);
+    Control.pid_yaw.prev_error = errorYaw;
+    float pidOutputYaw = pTermYaw + iTermYaw + dTermYaw;
+
+
+    int baseThrottle = Control.base_throttle;
+
+
+    printf("Roll: %f;Pitch: %f;Yaw: %f\n", pidOutputRoll, pidOutputPitch, pidOutputYaw);
+
+    if (baseThrottle <= MOTOR_MIN_SPEED) {
+        Control.motor_control.motor1_speed = MOTOR_MIN_SPEED;
+        Control.motor_control.motor2_speed = MOTOR_MIN_SPEED;
+        Control.motor_control.motor3_speed = MOTOR_MIN_SPEED;
+        Control.motor_control.motor4_speed = MOTOR_MIN_SPEED;
+        return;
+    };
+
+
+    Control.motor_control.motor1_speed = baseThrottle + pidOutputPitch - pidOutputRoll - pidOutputYaw;
+    Control.motor_control.motor2_speed = baseThrottle + pidOutputPitch + pidOutputRoll + pidOutputYaw;
+    Control.motor_control.motor3_speed = baseThrottle - pidOutputPitch + pidOutputRoll - pidOutputYaw;
+    Control.motor_control.motor4_speed = baseThrottle - pidOutputPitch - pidOutputRoll + pidOutputYaw;
+
+//    Control.motor_control.motor1_speed = constrain(Control.motor_control.motor1_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+//    Control.motor_control.motor2_speed = constrain(Control.motor_control.motor2_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+//    Control.motor_control.motor3_speed = constrain(Control.motor_control.motor3_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+//    Control.motor_control.motor4_speed = constrain(Control.motor_control.motor4_speed, MOTOR_MIN_SPEED, MOTOR_MAX_SPEED);
+
 }
 
-// Método PID para calcular el control basado en el error
-float pidCompute(PID* pid, float error) {
-    pid->integral += error;
-    float derivative = error - pid->prev_error;
 
-    float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
 
-    pid->prev_error = error;
 
-    // Limitar el valor de salida entre el rango de velocidad de los motores
-    if (output > MOTOR_MAX_SPEED) output = MOTOR_MAX_SPEED;
-    if (output < MOTOR_MIN_SPEED) output = MOTOR_MIN_SPEED;
-
-    return output;
-}
-
-// Asignar las velocidades de los motores basados en el PID
 void Control_SetMotorSpeeds(void) {
-
     int motor1_speed = (Control.motor_control.motor1_speed < 0) ? 0 : (Control.motor_control.motor1_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor1_speed);
     int motor2_speed = (Control.motor_control.motor2_speed < 0) ? 0 : (Control.motor_control.motor2_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor2_speed);
     int motor3_speed = (Control.motor_control.motor3_speed < 0) ? 0 : (Control.motor_control.motor3_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor3_speed);
     int motor4_speed = (Control.motor_control.motor4_speed < 0) ? 0 : (Control.motor_control.motor4_speed > MOTOR_MAX_SPEED ? MOTOR_MAX_SPEED : Control.motor_control.motor4_speed);
 
-    TIM1->CCR1 = motor1_speed;  // Motor 1 (TIM1 Channel 1)
-    TIM1->CCR4 = motor2_speed;  // Motor 2 (TIM1 Channel 4)
-    TIM2->CCR1 = motor3_speed;  // Motor 3 (TIM2 Channel 1)
-    TIM2->CCR2 = motor4_speed;  // Motor 4 (TIM2 Channel 2)
+    TIM1->CCR1 = motor1_speed;
+    TIM1->CCR4 = motor2_speed;
+    TIM2->CCR1 = motor3_speed;
+    TIM2->CCR2 = motor4_speed;
+
+    printf("Motor Speeds: %d, %d, %d, %d\n", motor1_speed, motor2_speed, motor3_speed, motor4_speed);
 }
 
-
-void Control_SetMotorsPower(int base_power_percentage) {
+void Control_SetMotorsPower(uint8_t base_power_percentage) {
     if (base_power_percentage < 0) base_power_percentage = 0;
     if (base_power_percentage > 100) base_power_percentage = 100;
 
-    int base_power = MOTOR_MAX_SPEED * base_power_percentage / 100;
+    printf("Base power percentage: %d\n", base_power_percentage);
 
-    printData("Base power: %d\n", base_power);
-    Control.motor_control.motor1_speed = base_power;
-    Control.motor_control.motor2_speed = base_power;
-    Control.motor_control.motor3_speed = base_power;
-    Control.motor_control.motor4_speed = base_power;
-
-    Control_Update(); //igual mejor no empezar ajustando por si acaso pero ya se quitara si no
+    Control.base_throttle = MOTOR_MIN_SPEED + ((MOTOR_MAX_SPEED - MOTOR_MIN_SPEED) * base_power_percentage) / 100;
 }
 
-
 void Control_SendMotorCommands(void) {
-    printData("Motor 1 speed: %d\n", Control.motor_control.motor1_speed);
-    printData("Motor 2 speed: %d\n", Control.motor_control.motor2_speed);
-    printData("Motor 3 speed: %d\n", Control.motor_control.motor3_speed);
-    printData("Motor 4 speed: %d\n", Control.motor_control.motor4_speed);
+    printf("Motor 1 speed: %d\n", Control.motor_control.motor1_speed);
+    printf("Motor 2 speed: %d\n", Control.motor_control.motor2_speed);
+    printf("Motor 3 speed: %d\n", Control.motor_control.motor3_speed);
+    printf("Motor 4 speed: %d\n", Control.motor_control.motor4_speed);
+}
+
+void Control_Stop(void) {
+	Control.base_throttle = 0;
+    Control.motor_control.motor1_speed = 0;
+    Control.motor_control.motor2_speed = 0;
+    Control.motor_control.motor3_speed = 0;
+    Control.motor_control.motor4_speed = 0;
+    Control_SetMotorSpeeds();
+
+    printData("Motors stopped\n");
 }

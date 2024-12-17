@@ -11,6 +11,6 @@ void sendSensorData(void);  // Enviar datos de los sensores
 void sendControlCommand(const char* command);  // Enviar comandos de control al ESP8266
 
 // Función para recibir comandos del ESP8266
-void receiveControlCommand(void);  // Recibir comandos del ESP8266 para controlar los motores
+void receiveControlCommand(uint8_t *rx_buffer, uint16_t length);  // Recibir comandos del ESP8266 para controlar los motores
 
 #endif /* COMUNICACION_H */

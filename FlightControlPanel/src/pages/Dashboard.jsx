@@ -142,33 +142,55 @@ const Dashboard = () => {
 
 
 
-    // Inicializar WebSocket
-    useEffect(() => {
-      const ws = new WebSocket('ws://192.168.235.45:81'); // Cambia la IP por la de tu ESP8266
-      setSocket(ws);
-  
-      ws.onopen = () => {
-        console.log('Conexión WebSocket abierta');
-      };
-  
-      ws.onmessage = (event) => {
-        console.log('Mensaje recibido:', event.data);
-        setValorRecibido(event.data); // Actualiza el estado con el mensaje recibido
-      };
-  
-      ws.onerror = (error) => {
-        console.error('Error en WebSocket:', error);
-      };
-  
-      ws.onclose = () => {
-        console.log('Conexión WebSocket cerrada');
-      };
-  
-      // Limpieza al desmontar el componente
-      return () => {
-        ws.close();
-      };
-    }, []);
+     // WebSocket URL
+  const wsUrl = 'ws://192.168.235.45:81'; // Replace with your WebSocket server URL
+
+  // Reconnection parameters
+  const [retries, setRetries] = useState(0);
+  const maxRetries = 10; // Maximum retry attempts
+  const retryDelay = 3000; // Delay in ms between retries
+
+  // Function to create WebSocket connection
+  const createWebSocketConnection = () => {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('WebSocket connection established');
+      setRetries(0); // Reset retry count after successful connection
+    };
+
+    ws.onmessage = (event) => {
+      console.log('Message received:', event.data);
+      setValorRecibido(event.data); // Update state with received message
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      if (retries < maxRetries) {
+        setRetries(prevRetries => prevRetries + 1);
+        setTimeout(createWebSocketConnection, retryDelay); // Try to reconnect after a delay
+      } else {
+        console.log('Max retries reached, WebSocket will not reconnect');
+      }
+    };
+
+    setSocket(ws); // Save WebSocket instance in state
+  };
+
+  // Initialize WebSocket connection on component mount
+  useEffect(() => {
+    createWebSocketConnection(); // Initial WebSocket connection attempt
+
+    return () => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close(); // Clean up WebSocket when component unmounts
+      }
+    };
+  }, []); // Empty array to run this effect only once on mount
   
     // Función para enviar mensajes
     const sendCommand = (command) => {
@@ -269,7 +291,7 @@ const Dashboard = () => {
               }}
             />
             <button
-              onClick={() => sendCommand('Hola desde React')}
+              onClick={() => sendCommand(e.target.value)}
               className="bg-green-600 px-4  rounded hover:bg-green-500"
             >
               Send Command

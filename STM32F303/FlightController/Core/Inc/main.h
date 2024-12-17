@@ -71,6 +71,7 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
+extern uint8_t control_update_flag;
 
 /* USER CODE END Private defines */
 
