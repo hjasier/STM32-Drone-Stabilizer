@@ -46,14 +46,14 @@ A custom made drone stabilization and monitoring system built with an STM32F303K
 ![I4](https://github.com/hjasier/STM32-Drone-Stabilizer/blob/main/readmemedia/img4.gif?raw=true)
 
 ## 📚 LicenseLibraries Used
+
 Arduino Core for ESP8266 (Arduino.h)
-
 Provides the basic functions of the Arduino environment, such as setup(), loop(), pin control, and serial communication.
-Documentation: Arduino Core for ESP8266
-ESP8266WiFi
+Documentation: Arduino Core for ESP8266 ![I5](https://arduino-esp8266.readthedocs.io/en/latest/)
 
+ESP8266WiFi
 Enables the ESP8266 to connect to Wi-Fi networks, including methods to manage the connection state and retrieve the device's IP address.
-Documentation: ESP8266WiFi Library
+Documentation: ESP8266WiFi Library ![I6](https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html)
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for more details.
