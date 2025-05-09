@@ -49,11 +49,11 @@ A custom made drone stabilization and monitoring system built with an STM32F303K
 
   **Arduino Core for ESP8266 (Arduino.h)**
   Provides the basic functions of the Arduino environment, such as setup(), loop(), pin control, and serial communication.
-  Documentation: Arduino Core for ESP8266 ![I5](https://arduino-esp8266.readthedocs.io/en/latest/)
+  Documentation: Arduino Core for ESP8266 [Core Docs](https://arduino-esp8266.readthedocs.io/en/latest/)
 
   **ESP8266WiFi**
   Enables the ESP8266 to connect to Wi-Fi networks, including methods to manage the connection state and retrieve the device's IP address.
-  Documentation: ESP8266WiFi Library ![I6](https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html)
+  Documentation: ESP8266WiFi Library [Wifi Docs](https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html)
 
 
 ## License
